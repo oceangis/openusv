@@ -22,10 +22,8 @@
 #include "utility/functor.h"
 #include "AP_HAL_Boards.h"
 
-#if CONFIG_HAL_BOARD != HAL_BOARD_QURT
-// we need utility for std::move, but not on QURT due to a include error in hexagon SDK
+// QURT removed - ESP32/SITL only
 #include <utility>
-#endif
 
 /*
  * This is an interface abstracting I2C and SPI devices

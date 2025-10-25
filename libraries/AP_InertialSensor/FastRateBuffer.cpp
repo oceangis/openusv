@@ -24,7 +24,7 @@
 
 extern const AP_HAL::HAL& hal;
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
 // hal.console can be accessed from bus threads on ChibiOS
 #define debug(fmt, args ...)  do {hal.console->printf("IMU: " fmt "\n", ## args); } while(0)
 #else

@@ -25,7 +25,7 @@
 
 #if HAVE_AP_BLHELI_SUPPORT
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
 #include <hal.h>
 #endif
 

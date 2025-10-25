@@ -14,7 +14,7 @@
 /*
   allow double maths on Linux and SITL to avoid problems with system headers
  */
-#define AP_MATH_ALLOW_DOUBLE_FUNCTIONS (CONFIG_HAL_BOARD == HAL_BOARD_SITL || CONFIG_HAL_BOARD == HAL_BOARD_LINUX || HAL_WITH_EKF_DOUBLE || AP_SIM_ENABLED)
+#define AP_MATH_ALLOW_DOUBLE_FUNCTIONS (CONFIG_HAL_BOARD == HAL_BOARD_SITL  || HAL_WITH_EKF_DOUBLE || AP_SIM_ENABLED)
 #endif  // AP_MATH_ALLOW_DOUBLE_FUNCTIONS
 
 // we need to include math.h here for newer compilers (eg. g++ 7.3.1 for stm32)

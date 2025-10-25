@@ -570,7 +570,7 @@ AP_DAL &dal()
 void rprintf(const char *format, ...)
 {
 
-#if (APM_BUILD_TYPE(APM_BUILD_Replay) || CONFIG_HAL_BOARD == HAL_BOARD_SITL) && CONFIG_HAL_BOARD != HAL_BOARD_CHIBIOS
+#if (APM_BUILD_TYPE(APM_BUILD_Replay) || CONFIG_HAL_BOARD == HAL_BOARD_SITL) 
 #if APM_BUILD_TYPE(APM_BUILD_Replay)
     const char *fname = "/tmp/replay.log";
 #elif CONFIG_HAL_BOARD == HAL_BOARD_SITL

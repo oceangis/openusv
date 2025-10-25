@@ -10,11 +10,7 @@
 
 // we need a boardconfig created so that the io processor's enable
 // parameter is available
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-#include <AP_BoardConfig/AP_BoardConfig.h>
-#include <AP_IOMCU/AP_IOMCU.h>
-AP_BoardConfig BoardConfig;
-#endif
+// Removed CHIBIOS block
 
 void setup();
 void loop();
@@ -88,9 +84,7 @@ MENU(menu, "Menu: ", rcoutput_menu_commands);
 void setup(void) {
     hal.console->printf("Starting AP_HAL::RCOutput test\n");
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-    BoardConfig.init();
-#endif
+// Removed CHIBIOS block
     for (uint8_t i = 0; i < 14; i++) {
         hal.rcout->enable_ch(i);
     }

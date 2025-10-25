@@ -8,7 +8,7 @@
 #include <AP_Common/sorting.h>
 #include <stdlib.h>
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_SITL || CONFIG_HAL_BOARD == HAL_BOARD_LINUX
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL 
 
 typedef int (*compare_fn_t)(const void*, const void*);
 

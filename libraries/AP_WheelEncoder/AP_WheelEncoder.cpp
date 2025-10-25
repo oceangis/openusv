@@ -167,9 +167,7 @@ void AP_WheelEncoder::init(void)
         switch ((WheelEncoder_Type)_type[i].get()) {
 
         case WheelEncoder_TYPE_QUADRATURE:
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-            drivers[i] = NEW_NOTHROW AP_WheelEncoder_Quadrature(*this, i, state[i]);
-#endif
+// Removed CHIBIOS block
             break;
 
         case WheelEncoder_TYPE_SITL_QUADRATURE:

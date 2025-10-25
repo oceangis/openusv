@@ -138,32 +138,7 @@ TEST(RotationsTest, TestRotateMatrix)
     }
 }
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
-TEST(RotationsTest, TestFailedGetLinux)
-{
-    AP::custom_rotations().set(ROTATION_CUSTOM_OLD, 0, 0, 0);
-    Vector3f vec(1,2,3);
-    Vector3f vec2 = vec;
-    AP::custom_rotations().rotate(ROTATION_CUSTOM_OLD, vec2);
-    EXPECT_TRUE(vec == vec2);
-    Vector3d vecd(1,2,3);
-    Vector3d vecd2 = vecd;
-    AP::custom_rotations().rotate(ROTATION_CUSTOM_OLD, vecd2);
-    EXPECT_TRUE(vecd == vecd2);
-    Quaternion q(1.0f, 0.0f, 0.0f, 0.0f);
-    Quaternion q2(1.0f, 0.0f, 0.0f, 0.0f);
-    AP::custom_rotations().from_rotation(ROTATION_CUSTOM_OLD, q2);
-    for (int a = 0; a < 4; ++a) {
-        EXPECT_FLOAT_EQ(q[a], q2[a]);
-    }
-    QuaternionD qd(1.0, 0.0, 0.0, 0.0);
-    QuaternionD qd2(1.0, 0.0, 0.0, 0.0);
-    AP::custom_rotations().from_rotation(ROTATION_CUSTOM_OLD, qd2);
-    for (int a = 0; a < 4; ++a) {
-        EXPECT_FLOAT_EQ(qd[a], qd2[a]);
-    }
-}
-#endif
+// Removed LINUX block
 
 static void breakSingleton()
 {

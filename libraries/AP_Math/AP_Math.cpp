@@ -32,12 +32,16 @@ is_equal(const Arithmetic1 v_1, const Arithmetic2 v_2)
         return fabs(v_1 - v_2) < std::numeric_limits<double>::epsilon();
     }
 #endif
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wabsolute-value"
+#endif
     // clang doesn't realise we catch the double case above and warns
     // about loss of precision here.
     return fabsf(v_1 - v_2) < std::numeric_limits<float>::epsilon();
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif
 }
 
 template bool is_equal<int>(const int v_1, const int v_2);

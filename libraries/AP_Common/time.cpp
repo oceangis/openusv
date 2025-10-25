@@ -1,4 +1,4 @@
-#include "time.h"
+#include "ap_time.h"
 
 /*
   mktime replacement from Samba
@@ -41,4 +41,3 @@ time_t ap_mktime(const struct tm *t)
 
     return epoch;
 }
-

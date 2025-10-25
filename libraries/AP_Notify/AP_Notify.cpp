@@ -33,8 +33,9 @@
 #include "LP5562.h"
 #include "VRBoard_LED.h"
 #include "DiscreteRGBLed.h"
-#include "DiscoLED.h"
+#if AP_NOTIFY_SYSFS_LED_ENABLED
 #include "Led_Sysfs.h"
+#endif
 #include "DroneCAN_RGB_LED.h"
 #include "SITL_SFML_LED.h"
 #include <stdio.h>

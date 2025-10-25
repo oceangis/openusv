@@ -25,8 +25,53 @@
 
 #include <AP_Common/AP_Common.h>
 #include <AP_Math/AP_Math.h>
+
+// Provide portable byte-swap and endianness support across platforms.
+// byteswap.h and endian.h are not available on all toolchains (e.g. ESP-IDF/newlib).
+#if __has_include(<byteswap.h>)
 #include <byteswap.h>
+#else
+#  ifndef __bswap_16
+static inline uint16_t __bswap_16(uint16_t x) { return __builtin_bswap16(x); }
+#  endif
+#  ifndef __bswap_32
+static inline uint32_t __bswap_32(uint32_t x) { return __builtin_bswap32(x); }
+#  endif
+#  ifndef __bswap_64
+static inline uint64_t __bswap_64(uint64_t x) { return __builtin_bswap64(x); }
+#  endif
+#endif
+
+#if __has_include(<endian.h>)
 #include <endian.h>
+#elif __has_include(<machine/endian.h>)
+#include <machine/endian.h>
+#endif
+
+#ifndef __LITTLE_ENDIAN
+#  ifdef __ORDER_LITTLE_ENDIAN__
+#    define __LITTLE_ENDIAN __ORDER_LITTLE_ENDIAN__
+#  else
+#    define __LITTLE_ENDIAN 1234
+#  endif
+#endif
+
+#ifndef __BIG_ENDIAN
+#  ifdef __ORDER_BIG_ENDIAN__
+#    define __BIG_ENDIAN __ORDER_BIG_ENDIAN__
+#  else
+#    define __BIG_ENDIAN 4321
+#  endif
+#endif
+
+#ifndef __BYTE_ORDER
+#  ifdef __BYTE_ORDER__
+#    define __BYTE_ORDER __BYTE_ORDER__
+#  else
+     // Default to little-endian on ESP32 and most embedded targets
+#    define __BYTE_ORDER __LITTLE_ENDIAN
+#  endif
+#endif
 #include <stdint.h>
 
 #ifdef __CHECKER__

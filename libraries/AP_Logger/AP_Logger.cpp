@@ -881,7 +881,7 @@ void AP_Logger::periodic_tasks() {
     FOR_EACH_BACKEND(periodic_tasks());
 }
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_SITL || CONFIG_HAL_BOARD == HAL_BOARD_LINUX
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL 
     // currently only AP_Logger_File support this:
 void AP_Logger::flush(void) {
      FOR_EACH_BACKEND(flush());

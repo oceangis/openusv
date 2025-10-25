@@ -115,7 +115,7 @@ void AP_LoggerTest::setup(void)
                          now,
                          17.3);
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_SITL || CONFIG_HAL_BOARD == HAL_BOARD_LINUX
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL 
     logger.flush();
 #endif
 

@@ -225,11 +225,7 @@ void AP_Logger::handle_log_sending()
         // when on USB we can send a lot more data
         num_sends = 250;
     } else if (_log_sending_link->have_flow_control()) {
-    #if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
-        num_sends = 80;
-    #else
-        num_sends = 10;
-    #endif
+    // Removed LINUX block
     }
 #endif
 

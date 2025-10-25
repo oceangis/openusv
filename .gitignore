@@ -175,3 +175,16 @@ env.bak/
 venv.bak/
 autotest_result_*_junit.xml
 .python-version
+
+# ESP-IDF specific
+sdkconfig.old
+/build/
+/managed_components/
+/dependencies.lock
+
+# Log files
+log/
+*.log
+
+# Temporary files
+nul

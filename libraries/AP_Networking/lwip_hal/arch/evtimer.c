@@ -1,3 +1,6 @@
+#include <AP_Networking/AP_Networking_Config.h>
+
+#if AP_NETWORKING_BACKEND_CHIBIOS
 /*
   wrapper around evtimer.c so we only build when events are
   enabled. This prevents a complex check in the ChibiOS mk layer
@@ -7,5 +10,7 @@
 #if CH_CFG_USE_EVENTS
 // this include relies on -I for modules/ChibiOS/os/various/cpp_wrappers
 #include <../evtimer.c>
+#endif
+
 #endif
 

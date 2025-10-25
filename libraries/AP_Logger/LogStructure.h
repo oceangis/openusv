@@ -142,7 +142,7 @@ const struct MultiplierStructure log_Multipliers[] = {
 #include <AC_Avoidance/LogStructure.h>
 #include <AP_ESC_Telem/LogStructure.h>
 #include <AP_AIS/LogStructure.h>
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
 #include <AP_HAL_ChibiOS/LogStructure.h>
 #else
 // Define empty macro for non-ChibiOS boards
@@ -160,7 +160,7 @@ const struct MultiplierStructure log_Multipliers[] = {
 // It is packed on ChibiOS to save flash space; however, this causes problems
 // when building the SITL on an Apple M1 CPU (and is also slower) so we do not
 // pack it by default
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
 struct PACKED LogStructure {
 #else
 struct LogStructure {

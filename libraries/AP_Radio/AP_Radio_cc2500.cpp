@@ -21,12 +21,7 @@
 #include <AP_Math/crc.h>
 #include <AP_Param/AP_Param.h>
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-#define TIMEOUT_PRIORITY 185
-#define EVT_TIMEOUT EVENT_MASK(0)
-#define EVT_IRQ EVENT_MASK(1)
-#define EVT_BIND EVENT_MASK(2)
-#endif
+// Removed CHIBIOS block
 
 extern const AP_HAL::HAL& hal;
 
@@ -34,11 +29,7 @@ extern const AP_HAL::HAL& hal;
 
 // object instance for trampoline
 AP_Radio_cc2500 *AP_Radio_cc2500::radio_singleton;
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-thread_t *AP_Radio_cc2500::_irq_handler_ctx;
-virtual_timer_t AP_Radio_cc2500::timeout_vt;
-uint32_t AP_Radio_cc2500::irq_time_us;
-#endif
+// Removed CHIBIOS block
 
 #define USE_D16_FORMAT 0
 
@@ -83,18 +74,7 @@ AP_Radio_cc2500::AP_Radio_cc2500(AP_Radio &_radio) :
  */
 bool AP_Radio_cc2500::init(void)
 {
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-    if (_irq_handler_ctx != nullptr) {
-        AP_HAL::panic("AP_Radio_cc2500: double instantiation of irq_handler");
-    }
-    chVTObjectInit(&timeout_vt);
-    _irq_handler_ctx = chThdCreateFromHeap(NULL,
-                                           THD_WORKING_AREA_SIZE(2048),
-                                           "radio_cc2500",
-                                           TIMEOUT_PRIORITY,
-                                           irq_handler_thd,
-                                           NULL);
-#endif
+// Removed CHIBIOS block
 
     return reset();
 }

@@ -30,11 +30,7 @@ extern const AP_HAL::HAL& hal;
 
 static StorageAccess fence_storage(StorageManager::StorageFence);
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-#define AC_FENCE_SDCARD_FILENAME "APM/fence.stg"
-#else
-#define AC_FENCE_SDCARD_FILENAME "fence.stg"
-#endif
+// Removed CHIBIOS block
 
 void AC_PolyFence_loader::init()
 {

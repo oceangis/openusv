@@ -816,7 +816,7 @@ void AP_Logger_File::start_new_log(void)
         return;
     }
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
     // remember if we had utc time when we opened the file
 #if AP_RTC_ENABLED
     uint64_t utc_usec;
@@ -878,7 +878,7 @@ bool AP_Logger_File::write_lastlog_file(uint16_t log_num)
     return written == to_write;
 }
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_SITL || CONFIG_HAL_BOARD == HAL_BOARD_LINUX
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL 
 void AP_Logger_File::flush(void)
 #if APM_BUILD_TYPE(APM_BUILD_Replay) || APM_BUILD_TYPE(APM_BUILD_UNKNOWN)
 {
@@ -1024,7 +1024,7 @@ void AP_Logger_File::io_timer(void)
             last_io_operation = "";
         }
 
-#if AP_RTC_ENABLED && CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if AP_RTC_ENABLED && 0 // ChibiOS removed
         // ChibiOS does not update mtime on writes, so if we opened
         // without knowing the time we should update it later
         if (_need_rtc_update) {

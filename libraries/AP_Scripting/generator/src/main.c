@@ -2855,8 +2855,8 @@ void emit_docs_method(const char *name, const char *method_name, struct method *
   // input arguments
   while (arg != NULL) {
     if ((arg->type.type != TYPE_LITERAL) && (arg->type.flags & (TYPE_FLAGS_NULLABLE | TYPE_FLAGS_REFERENCE)) == 0) {
-      char *param_name = (char *)allocate(20);
-      sprintf(param_name, "---@param param%i", count);
+      char *param_name = (char *)allocate(32);
+      snprintf(param_name, 32, "---@param param%i", count);
       emit_docs_param_type(arg->type, param_name, "\n");
       free(param_name);
       count++;

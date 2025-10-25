@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(cp:*)",
+      "Bash(python esp32_hwdef.py:*)",
+      "Bash(python scripts/esp32_hwdef.py:*)",
+      "Bash(mkdir:*)",
+      "Bash(rm:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

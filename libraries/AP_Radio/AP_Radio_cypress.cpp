@@ -22,11 +22,7 @@
   configuration code and register defines
    https://github.com/esden/superbitrf-firmware
  */
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-#define TIMEOUT_PRIORITY 181
-#define EVT_TIMEOUT EVENT_MASK(0)
-#define EVT_IRQ EVENT_MASK(1)
-#endif
+// Removed CHIBIOS block
 
 #ifndef CYRF_SPI_DEVICE
 # define CYRF_SPI_DEVICE "cypress"
@@ -243,9 +239,7 @@ enum {
 
 // object instance for trampoline
 AP_Radio_cypress *AP_Radio_cypress::radio_singleton;
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-thread_t *AP_Radio_cypress::_irq_handler_ctx;
-#endif
+// Removed CHIBIOS block
 /*
   constructor
  */
@@ -262,18 +256,7 @@ AP_Radio_cypress::AP_Radio_cypress(AP_Radio &_radio) :
 bool AP_Radio_cypress::init(void)
 {
     dev = hal.spi->get_device(CYRF_SPI_DEVICE);
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-    if (_irq_handler_ctx != nullptr) {
-        AP_HAL::panic("AP_Radio_cypress: double instantiation of irq_handler");
-    }
-    chVTObjectInit(&timeout_vt);
-    _irq_handler_ctx = chThdCreateFromHeap(NULL,
-                                           THD_WORKING_AREA_SIZE(2048),
-                                           "radio_cypress",
-                                           TIMEOUT_PRIORITY,
-                                           irq_handler_thd,
-                                           NULL);
-#endif
+// Removed CHIBIOS block
     load_bind_info();
 
     return reset();

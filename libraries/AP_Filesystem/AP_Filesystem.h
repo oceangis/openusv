@@ -28,26 +28,12 @@
 #define MAX_NAME_LEN 255
 #endif
 
-#if (CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS) || (CONFIG_HAL_BOARD == HAL_BOARD_ESP32)
+// ChibiOS removed - ESP32 only for this section
+#if CONFIG_HAL_BOARD == HAL_BOARD_ESP32
 #define DT_REG 0
 #define DT_DIR 1
 #define DT_LNK 10
 #endif
-
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-#if AP_FILESYSTEM_FATFS_ENABLED
-#include "AP_Filesystem_FATFS.h"
-#endif
-#if AP_FILESYSTEM_LITTLEFS_ENABLED
-#include "AP_Filesystem_FlashMemory_LittleFS.h"
-#endif
-
-struct dirent {
-   char    d_name[MAX_NAME_LEN]; /* filename */
-   uint8_t d_type;
-};
-
-#endif // HAL_BOARD_CHIBIOS
 
 #include <fcntl.h>
 #include <errno.h>
@@ -57,7 +43,8 @@ struct dirent {
 #define AP_FILESYSTEM_FORMAT_ENABLED 1
 #endif
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX || CONFIG_HAL_BOARD == HAL_BOARD_SITL || CONFIG_HAL_BOARD == HAL_BOARD_QURT
+// Linux and QURT removed - SITL only
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 #include "AP_Filesystem_posix.h"
 #if AP_FILESYSTEM_LITTLEFS_ENABLED
 #include "AP_Filesystem_FlashMemory_LittleFS.h"

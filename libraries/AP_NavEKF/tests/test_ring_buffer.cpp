@@ -10,7 +10,7 @@
 #include <AP_HAL/AP_HAL.h>
 const AP_HAL::HAL& hal = AP_HAL::get_HAL();
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_SITL || CONFIG_HAL_BOARD == HAL_BOARD_LINUX
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL 
 
 TEST(EKF_Buffer, EKF_Buffer)
 {

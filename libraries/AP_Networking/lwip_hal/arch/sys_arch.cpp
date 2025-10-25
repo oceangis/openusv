@@ -10,7 +10,7 @@
 #include <AP_HAL/Semaphores.h>
 #include <AP_Math/AP_Math.h>
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
 #include <AP_HAL_ChibiOS/hwdef/common/stm32_util.h>
 #endif
 

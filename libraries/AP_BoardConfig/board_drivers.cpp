@@ -18,7 +18,7 @@
 
 
 #include <AP_HAL/AP_HAL.h>
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
 #include <hal.h>
 #endif
 #include "AP_BoardConfig.h"
@@ -437,7 +437,7 @@ void AP_BoardConfig::board_setup_sbus(void)
  */
 void AP_BoardConfig::board_setup()
 {
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
     // init needs to be done after boardconfig is read so parameters are set
     hal.gpio->init();
     hal.rcin->init();

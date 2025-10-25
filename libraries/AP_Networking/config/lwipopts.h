@@ -32,7 +32,7 @@
 #pragma once
 
 #include <AP_HAL/AP_HAL_Boards.h>
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
 #include "hwdef.h"
 #endif
 

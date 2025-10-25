@@ -103,7 +103,7 @@ public:
     void Fill_Format(const struct LogStructure *structure, struct log_Format &pkt);
     void Fill_Format_Units(const struct LogStructure *s, struct log_Format_Units &pkt);
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_SITL || CONFIG_HAL_BOARD == HAL_BOARD_LINUX
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL 
     // currently only AP_Logger_File support this:
     virtual void flush(void) { }
 #endif

@@ -118,7 +118,7 @@ private:
 
 void AP_LoggerTest_AllTypes::flush_logger(AP_Logger &_logger)
 {
-#if CONFIG_HAL_BOARD == HAL_BOARD_SITL || CONFIG_HAL_BOARD == HAL_BOARD_LINUX
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL 
     _logger.flush();
 #else
     // flush is not available on e.g. stm32 as it would be a somewhat

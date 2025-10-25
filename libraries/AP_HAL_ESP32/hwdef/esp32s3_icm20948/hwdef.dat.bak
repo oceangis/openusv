@@ -1,0 +1,67 @@
+# Custom ESP32-S3 board with ICM20948 on GPIO20/21 I2C
+
+define HAL_ESP32_BOARD_NAME "esp32s3_icm20948"
+
+# IMU / Compass setup (ICM20948 + AK09916 on I2C bus 0 @ 0x68/0x0C)
+define HAL_INS_DEFAULT HAL_INS_ICM20XXX_I2C
+define HAL_INS_ICM20XXX_I2C_BUS 0
+define HAL_INS_ICM20XXX_I2C_ADDR (0x68)
+define INS_MAX_INSTANCES 3
+
+define HAL_COMPASS_ICM20948_I2C_ADDR (0x68)
+define HAL_COMPASS_AK09916_I2C_BUS 0
+define HAL_COMPASS_AK09916_I2C_ADDR (0x0C)
+define HAL_COMPASS_MAX_SENSORS 3
+define AP_COMPASS_ICM20948_ENABLED 1
+define HAL_PROBE_EXTERNAL_I2C_COMPASSES 1
+
+IMU Invensensev2 I2C:0:0x68 ROTATION_NONE
+COMPASS AK09916:probe_ICM20948_I2C 0 ROTATION_NONE
+
+# Allow boot without barometer (none on this board by default)
+define HAL_BARO_ALLOW_INIT_NO_BARO 1
+
+# Wi-Fi softAP for telemetry
+define HAL_ESP32_WIFI 1
+define WIFI_SSID "ardupilot123"
+define WIFI_PWD "ardupilot123"
+
+# RC input/output pins (reuse ESP32-S3 DevKit defaults)
+ESP32_RCOUT GPIO_NUM_11
+ESP32_RCOUT GPIO_NUM_10
+ESP32_RCOUT GPIO_NUM_9
+ESP32_RCOUT GPIO_NUM_8
+ESP32_RCOUT GPIO_NUM_7
+ESP32_RCOUT GPIO_NUM_6
+
+define HAL_ESP32_RCIN GPIO_NUM_14
+define HAL_ESP32_RMT_RX_PIN_NUMBER GPIO_NUM_14
+
+# UARTs
+ESP32_SERIAL  UART_NUM_0  GPIO_NUM_44  GPIO_NUM_43
+ESP32_SERIAL  UART_NUM_1  GPIO_NUM_17  GPIO_NUM_18
+
+# I2C bus with SDA=20 / SCL=21 for the IMU
+#             Port       SDA         SCL          SPEED    INTERNAL SOFT
+ESP32_I2CBUS  I2C_NUM_0  GPIO_NUM_20 GPIO_NUM_21  400*KHZ  true     false
+
+# SPI placeholder (match DevKit so existing probes still build even if unused)
+#            Host      DMA Channel     MOSI        MISO        SCLK
+ESP32_SPIBUS SPI3_HOST SPI_DMA_CH_AUTO GPIO_NUM_36 GPIO_NUM_37 GPIO_NUM_35
+
+# Example SPI device entry (kept for compatibility; safe to ignore if unused)
+ESP32_SPIDEV  mpu9250   0     0       GPIO_NUM_34  0    2*MHZ   8*MHZ
+
+# ADC pins (same as DevKit)
+ESP32_ADC_PIN ADC_CHANNEL_4       11     1
+ESP32_ADC_PIN ADC_CHANNEL_3       11     2
+ESP32_ADC_PIN ADC_CHANNEL_1       11     3
+ESP32_ADC_PIN ADC_CHANNEL_0       11     4
+
+# Logging defaults (no SD slot on this board)
+define HAVE_FILESYSTEM_SUPPORT 0
+define HAL_ESP32_SDMMC 0
+define HAL_ESP32_SDCARD 0
+define LOGGER_MAVLINK_SUPPORT 1
+define HAL_OS_POSIX_IO 1
+define HAL_LOGGING_BACKENDS_DEFAULT 1

@@ -52,7 +52,6 @@ struct Param_header {
 
 static const uint16_t       _sentinal_key   = 0x1FF;
 static const uint8_t        _sentinal_type  = 0x1F;
-static const uint8_t        _sentinal_group = 0xFF;
 
 static uint8_t type_size(enum ap_var_type type)
 {

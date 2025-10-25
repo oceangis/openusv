@@ -32,7 +32,7 @@ const AP_HAL::HAL& hal = AP_HAL::get_HAL();
 void setup();
 void loop();
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX || CONFIG_HAL_BOARD == HAL_BOARD_SITL
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 
 #include <AP_HAL/utility/Socket_native.h>
 #include <AP_RCProtocol/AP_RCProtocol.h>
@@ -169,11 +169,7 @@ AP_HAL::HAL::FunCallbacks callbacks(setup, loop);
 extern "C" {
 int main(int argc, char* const argv[]);
 int main(int argc, char* const argv[]) {
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
-    if (argc > 1) {
-        devicename = argv[1];
-    }
-#endif
+// Removed LINUX block
     hal.run(argc, argv, &callbacks);
     return 0;
 }

@@ -1,0 +1,75 @@
+/*
+ generated hardware definitions from hwdef.dat - DO NOT EDIT
+*/
+
+#pragma once
+
+#ifndef TRUE
+#define TRUE 1
+#endif
+
+#ifndef FALSE
+#define FALSE 0
+#endif
+
+#define HAL_ESP32_BOARD_NAME "esp32s3_icm20948"
+#define HAL_INS_DEFAULT HAL_INS_ICM20XXX_I2C
+#define HAL_INS_ICM20XXX_I2C_BUS 0
+#define HAL_INS_ICM20XXX_I2C_ADDR (0x68)
+#define INS_MAX_INSTANCES 3
+#define HAL_COMPASS_ICM20948_I2C_ADDR (0x68)
+#define HAL_COMPASS_AK09916_I2C_BUS 0
+#define HAL_COMPASS_AK09916_I2C_ADDR (0x0C)
+#define HAL_COMPASS_MAX_SENSORS 3
+#define AP_COMPASS_ICM20948_ENABLED 1
+#define HAL_PROBE_EXTERNAL_I2C_COMPASSES 1
+#define HAL_BARO_ALLOW_INIT_NO_BARO 1
+#define HAL_ESP32_WIFI 1
+#define WIFI_SSID "ardupilot123"
+#define WIFI_PWD "ardupilot123"
+#define HAL_ESP32_RCIN GPIO_NUM_14
+#define HAL_ESP32_RMT_RX_PIN_NUMBER GPIO_NUM_14
+#define HAVE_FILESYSTEM_SUPPORT 0
+#define HAL_ESP32_SDMMC 0
+#define HAL_ESP32_SDCARD 0
+#define LOGGER_MAVLINK_SUPPORT 1
+#define HAL_OS_POSIX_IO 1
+#define HAL_LOGGING_BACKENDS_DEFAULT 1
+
+// SPI buses table
+#define HAL_ESP32_SPI_BUSES \
+   { .host=SPI3_HOST, .dma_ch=SPI_DMA_CH_AUTO, .mosi=GPIO_NUM_36, .miso=GPIO_NUM_37, .sclk=GPIO_NUM_35 },
+
+// SPI devices table
+#define HAL_ESP32_SPI_DEVICES \
+   {.name= "mpu9250", .bus=0, .device=0, .cs=GPIO_NUM_34, .mode=0, .lspeed=2*MHZ, .hspeed=8*MHZ}
+
+// i2c buses table
+#define HAL_ESP32_I2C_BUSES \
+   { .port=I2C_NUM_0, .sda=GPIO_NUM_20, .scl=GPIO_NUM_21, .speed=400*KHZ, .internal=true, .soft=false }
+#define HAL_INS_PROBE1  ADD_BACKEND(AP_InertialSensor_Invensensev2::probe(*this,GET_I2C_DEVICE(0,0x68),ROTATION_NONE))
+#ifndef INS_MAX_INSTANCES
+#define INS_MAX_INSTANCES 1
+#endif
+#define HAL_INS_PROBE_LIST HAL_INS_PROBE1
+
+#define HAL_MAG_PROBE1  ADD_BACKEND(DRIVER_AK09916, AP_Compass_AK09916::probe_ICM20948_I2C(0,ROTATION_NONE))
+#undef AP_COMPASS_AK09916_ENABLED
+#define AP_COMPASS_AK09916_ENABLED 1
+#define HAL_MAG_PROBE_LIST HAL_MAG_PROBE1
+
+
+// serial devices table
+#define HAL_ESP32_UART_DEVICES \
+   { .port=UART_NUM_0, .rx=GPIO_NUM_44, .tx=GPIO_NUM_43 },\
+   { .port=UART_NUM_1, .rx=GPIO_NUM_17, .tx=GPIO_NUM_18 }
+#define HAL_ESP32_RCOUT { GPIO_NUM_11, GPIO_NUM_10, GPIO_NUM_9, GPIO_NUM_8, GPIO_NUM_7, GPIO_NUM_6 }
+
+// ADC pins table
+#define HAL_ESP32_ADC_PINS \
+   { .channel=ADC_CHANNEL_4, .scaling=11, .ardupin=1 },\
+   { .channel=ADC_CHANNEL_3, .scaling=11, .ardupin=2 },\
+   { .channel=ADC_CHANNEL_1, .scaling=11, .ardupin=3 },\
+   { .channel=ADC_CHANNEL_0, .scaling=11, .ardupin=4 }
+
+// No SDSPI configuration

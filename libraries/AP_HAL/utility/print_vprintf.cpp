@@ -66,10 +66,7 @@
 #define FL_FLTEXP   FL_PREC
 #define FL_FLTFIX   FL_LONG
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-// get __FPU_PRESENT
-#include <hal.h>
-#endif
+// Removed CHIBIOS block
 
 void print_vprintf(AP_HAL::BetterStream *s, const char *fmt, va_list ap)
 {
@@ -158,7 +155,7 @@ void print_vprintf(AP_HAL::BetterStream *s, const char *fmt, va_list ap)
                 break;
             } while ((c = *fmt++) != 0);
 
-#if CONFIG_HAL_BOARD != HAL_BOARD_CHIBIOS || __FPU_PRESENT
+#if 1 // Always enabled for ESP32/SITL (ChibiOS removed)
             /*
              * Handle floating-point formats E, F, G, e, f, g.
              */
@@ -351,7 +348,7 @@ flt_oper:
 
                 goto tail;
             }
-#endif //#if CONFIG_HAL_BOARD != HAL_BOARD_CHIBIOS || __FPU_PRESENT
+#endif // Always enabled for ESP32/SITL
             /*
              * Handle string formats c, s, S.
              */

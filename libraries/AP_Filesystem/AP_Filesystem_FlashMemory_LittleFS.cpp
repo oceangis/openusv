@@ -318,7 +318,7 @@ void *AP_Filesystem_FlashMemory_LittleFS::opendir(const char *pathdir)
 
     memset(&result->entry, 0, sizeof(result->entry));
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX || CONFIG_HAL_BOARD == HAL_BOARD_SITL
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     result->entry.d_reclen = sizeof(result->entry);
 #endif
 
@@ -362,15 +362,10 @@ struct dirent *AP_Filesystem_FlashMemory_LittleFS::readdir(void *ptr)
 
     memset(&pair->entry, 0, sizeof(pair->entry));
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
-    pair->entry.d_ino = 0;
-    pair->entry.d_seekoff++;
-#endif
+// Removed LINUX block
 
     strncpy(pair->entry.d_name, info.name, MIN(strlen(info.name)+1, sizeof(pair->entry.d_name)));
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
-    pair->entry.d_namlen = strlen(info.name);
-#endif
+// Removed LINUX block
 
     pair->entry.d_type = info.type == LFS_TYPE_DIR ? DT_DIR : DT_REG;
 
@@ -1208,9 +1203,7 @@ static int errno_from_lfs_error(int lfs_error)
         case LFS_ERR_INVAL: return EINVAL;
         case LFS_ERR_NOSPC: return ENOSPC;
         case LFS_ERR_NOMEM: return ENOMEM;
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
-        case LFS_ERR_NOATTR: return ENOATTR;
-#endif
+// Removed LINUX block
         case LFS_ERR_NAMETOOLONG: return ENAMETOOLONG;
         default: return EIO;
     }

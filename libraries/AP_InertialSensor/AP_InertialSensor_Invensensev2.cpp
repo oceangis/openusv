@@ -34,7 +34,7 @@ extern const AP_HAL::HAL& hal;
 #define timing_printf(fmt, args...)
 #endif
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
 // hal.console can be accessed from bus threads on ChibiOS
 #define debug(fmt, args ...)  do {hal.console->printf("INV2: " fmt "\n", ## args); } while(0)
 #elif CONFIG_HAL_BOARD == HAL_BOARD_ESP32 

@@ -17,7 +17,7 @@
 #include <AR_Motors/AP_MotorsUGV.h>
 #include <AP_CheckFirmware/AP_CheckFirmware.h>
 #include <GCS_MAVLink/GCS.h>
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
 #include <AP_HAL_ChibiOS/sdcard.h>
 #include <AP_HAL_ChibiOS/hwdef/common/stm32_util.h>
 #endif
@@ -326,7 +326,7 @@ void AP_Vehicle::setup()
     AP_Param::check_var_info();
     load_parameters();
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
     if (AP_BoardConfig::get_sdcard_slowdown() != 0) {
         // user wants the SDcard slower, we need to remount
         sdcard_stop();

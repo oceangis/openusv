@@ -16,9 +16,7 @@ using namespace ChibiOS;
 
 extern const AP_HAL::HAL& hal;
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-#include <hal.h>
-#endif
+// Removed CHIBIOS block
 
 #define BEKEN_SELECT()      (dev->set_chip_select(true))
 #define BEKEN_DESELECT()    (dev->set_chip_select(false))

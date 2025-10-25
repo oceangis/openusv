@@ -143,7 +143,7 @@ public:
     }
 #endif
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
     static uint8_t get_sdcard_slowdown(void) {
         return _singleton?_singleton->_sdcard_slowdown.get():0;
     }
@@ -251,7 +251,7 @@ private:
         AP_Int8 safety_enable;
         AP_Int16 safety_option;
         AP_Int32 ignore_safety_channels;
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
         AP_Int8 ser_rtscts[9];
         AP_Int8 sbus_out_rate;
 #endif
@@ -329,7 +329,7 @@ private:
 
     AP_Int8 _pwm_volt_sel;
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
     AP_Int8 _sdcard_slowdown;
 #endif
 

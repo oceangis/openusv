@@ -30,14 +30,7 @@
 #include <AP_PiccoloCAN/AP_PiccoloCAN.h>
 #include <AP_EFI/AP_EFI_NWPMU.h>
 #include <GCS_MAVLink/GCS.h>
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
-#include <AP_HAL_Linux/CANSocketIface.h>
-#elif CONFIG_HAL_BOARD == HAL_BOARD_SITL
-#include <AP_HAL_SITL/CANSocketIface.h>
-#elif CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-#include <hal.h>
-#include <AP_HAL_ChibiOS/CANIface.h>
-#endif
+// Removed LINUX block
 
 #include <AP_Common/ExpandingString.h>
 #include <AP_Common/sorting.h>

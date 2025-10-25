@@ -228,8 +228,8 @@ AP_GPS_GSOF::pack_state_data()
         state.status = AP_GPS::NO_FIX;
     }
 
-    state.location.lat = (int32_t)(RAD_TO_DEG_DOUBLE * position.latitude_rad * (double)1e7);
-    state.location.lng = (int32_t)(RAD_TO_DEG_DOUBLE * position.longitude_rad * (double)1e7);
+    state.location.lat = (int32_t)((double)RAD_TO_DEG * position.latitude_rad * 1e7);
+    state.location.lng = (int32_t)((double)RAD_TO_DEG * position.longitude_rad * 1e7);
     state.location.alt = (int32_t)(position.altitude * 100);
     state.last_gps_time_ms = AP_HAL::millis();
 

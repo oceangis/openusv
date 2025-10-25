@@ -244,7 +244,7 @@ void GCS::get_sensor_status_flags(uint32_t &present,
 {
 // if this assert fails then fix it and the comment in GCS.h where
 // _statustext_queue is declared
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
 ASSERT_STORAGE_SIZE(GCS::statustext_t, 60);
 #endif
 

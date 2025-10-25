@@ -13,7 +13,7 @@
 #include <GCS_MAVLink/GCS.h>
 #include <AP_Math/crc.h>
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
 #include "hal.h"
 #include <AP_HAL_ChibiOS/hwdef/common/stm32_util.h>
 #include <AP_HAL_ChibiOS/CANIface.h>
@@ -123,7 +123,7 @@ void AP_Networking_CAN::mcast_server(void)
             goto de_allocate;
         }
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
         // tell the ethernet interface that we want to receive all
         // multicast packets
         ETH->MACPFR |= ETH_MACPFR_PM;

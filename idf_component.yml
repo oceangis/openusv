@@ -1,0 +1,12 @@
+## IDF Component Manager Manifest File
+## This file is used by the ESP-IDF component manager
+## https://docs.espressif.com/projects/idf-component-manager/
+
+dependencies:
+  idf:
+    version: ">=5.3.0"
+
+  espressif/esp_wifi: "^2.0.0"
+
+  # Optional: Add other components if needed
+  # espressif/esp_websocket_client: "^1.0.0"

@@ -1,11 +1,10 @@
 #include "AP_MultiHeap.h"
 #include <AP_HAL/AP_HAL_Boards.h>
 
-#if CONFIG_HAL_BOARD != HAL_BOARD_CHIBIOS
+#if 1 // Always enabled for ESP32/SITL (ChibiOS removed)
 
 /*
-  on systems other than chibios we map the allocation to the system
-  malloc/free functions
+  System malloc/free wrapper for heap management
  */
 
 #include <AP_InternalError/AP_InternalError.h>
@@ -116,4 +115,4 @@ void MultiHeap::heap_free(void *ptr)
     free(header);
 }
 
-#endif // CONFIG_HAL_BOARD != HAL_BOARD_CHIBIOS
+#endif // ESP32/SITL malloc wrapper

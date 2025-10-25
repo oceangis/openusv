@@ -26,7 +26,7 @@
 
 #if defined(__APPLE__) || defined(__OpenBSD__)
 #include <sys/mount.h>
-#elif CONFIG_HAL_BOARD != HAL_BOARD_QURT
+#elif CONFIG_HAL_BOARD == HAL_BOARD_ESP32 || CONFIG_HAL_BOARD == HAL_BOARD_SITL
 #include <sys/vfs.h>
 #endif
 

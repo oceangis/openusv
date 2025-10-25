@@ -10,12 +10,9 @@
 #define HAL_BOARD_SITL     3
 // #define HAL_BOARD_SMACCM   4  // unused
 // #define HAL_BOARD_PX4      5  // unused
-#define HAL_BOARD_LINUX    7
-// #define HAL_BOARD_VRBRAIN  8
-#define HAL_BOARD_CHIBIOS  10
+// #define HAL_BOARD_VRBRAIN  8  // unused
 // #define HAL_BOARD_F4LIGHT  11 // reserved
 #define HAL_BOARD_ESP32	   12
-#define HAL_BOARD_QURT     13
 #define HAL_BOARD_EMPTY    99
 // @LoggerEnumEnd
 
@@ -23,7 +20,7 @@
 /* Default board subtype is -1 */
 #define HAL_BOARD_SUBTYPE_NONE -1
 
-/* HAL Linux sub-types, starting at 1000 */
+/* HAL Linux sub-types - REMOVED (ESP32/SITL only)
 #define HAL_BOARD_SUBTYPE_LINUX_NONE       1000
 #define HAL_BOARD_SUBTYPE_LINUX_ERLEBOARD  1001
 #define HAL_BOARD_SUBTYPE_LINUX_PXF        1002
@@ -49,12 +46,12 @@
 #define HAL_BOARD_SUBTYPE_LINUX_CANZERO    1026
 #define HAL_BOARD_SUBTYPE_LINUX_PILOTPI    1027
 #define HAL_BOARD_SUBTYPE_LINUX_POCKET2    1028
-/* HAL CHIBIOS sub-types, starting at 5000
-
+*/
+/* HAL CHIBIOS sub-types - REMOVED (ESP32/SITL only)
    NOTE!! Do not add more subtypes unless they are really needed. Most
    boards do not need a subtype defined. It is only needed if we need
    to use #ifdef'd code to change behaviour
-*/
+
 // #define HAL_BOARD_SUBTYPE_CHIBIOS_SKYVIPER_F412	5000
 #define HAL_BOARD_SUBTYPE_CHIBIOS_FMUV3         5001
 // #define HAL_BOARD_SUBTYPE_CHIBIOS_FMUV4         5002
@@ -65,6 +62,7 @@
 // #define HAL_BOARD_SUBTYPE_CHIBIOS_VRUBRAIN_V51  5018
 // #define HAL_BOARD_SUBTYPE_CHIBIOS_VRCORE_V10    5019
 // #define HAL_BOARD_SUBTYPE_CHIBIOS_VRBRAIN_V54   5020
+*/
 
 #define HAL_BOARD_SUBTYPE_ESP32_DIY             6001
 #define HAL_BOARD_SUBTYPE_ESP32_ICARUS          6002
@@ -130,18 +128,12 @@
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     #include <AP_HAL/board/sitl.h>
-#elif CONFIG_HAL_BOARD == HAL_BOARD_LINUX
-    #include <AP_HAL/board/linux.h>
 #elif CONFIG_HAL_BOARD == HAL_BOARD_EMPTY
     #include <AP_HAL/board/empty.h>
-#elif CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-	#include <AP_HAL/board/chibios.h>
 #elif CONFIG_HAL_BOARD == HAL_BOARD_ESP32
     #include <AP_HAL/board/esp32.h>
-#elif CONFIG_HAL_BOARD == HAL_BOARD_QURT
-    #include <AP_HAL/board/qurt.h>
 #else
-#error "Unknown CONFIG_HAL_BOARD type"
+#error "Unknown CONFIG_HAL_BOARD type - only SITL and ESP32 supported"
 #endif
 
 #ifndef CONFIG_HAL_BOARD_SUBTYPE
@@ -273,11 +265,8 @@
 #endif
 
 #ifndef AP_CAN_SLCAN_ENABLED
-#if HAL_NUM_CAN_IFACES && CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-#define AP_CAN_SLCAN_ENABLED 1
-#else
+// ChibiOS removed - ESP32/SITL only
 #define AP_CAN_SLCAN_ENABLED 0
-#endif
 #endif
 
 #ifndef AP_HAL_SHARED_DMA_ENABLED

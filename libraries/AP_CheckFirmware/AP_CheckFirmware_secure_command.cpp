@@ -22,7 +22,7 @@ extern const AP_HAL::HAL &hal;
  */
 const struct ap_secure_data *AP_CheckFirmware::find_public_keys(void)
 {
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
     const uint32_t page_size = hal.flash->getpagesize(0);
     const uint32_t flash_addr = hal.flash->getpageaddr(0);
     const uint8_t *flash = (const uint8_t *)flash_addr;
@@ -51,7 +51,7 @@ bool AP_CheckFirmware::all_zero_keys(const struct ap_secure_data *sec_data)
 }
 
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
 /*
   return true if 1k of data is all 0xff (empty flash)
  */
@@ -76,7 +76,7 @@ static bool empty_1k(const uint8_t *data)
  */
 AP_CheckFirmware::bl_data *AP_CheckFirmware::read_bootloader(void)
 {
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
     struct bl_data *bld = NEW_NOTHROW bl_data;
     if (bld == nullptr) {
         return nullptr;
@@ -163,7 +163,7 @@ static void make_session_key(uint8_t key[8])
  */
 bool AP_CheckFirmware::write_bootloader(const struct bl_data *bld)
 {
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
     const uint32_t flash_addr = hal.flash->getpageaddr(0);
     EXPECT_DELAY_MS(3000);
     if (!hal.flash->erasepage(0)) {

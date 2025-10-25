@@ -345,7 +345,7 @@ bool AP_Logger_Backend::Write_Message(const char *message)
 
 void AP_Logger::Write_Power(void)
 {
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
     uint8_t safety_and_armed = uint8_t(hal.util->safety_switch_state());
     if (hal.util->get_soft_armed()) {
         // encode armed state in bit 3

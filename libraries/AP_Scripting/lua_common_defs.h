@@ -2,6 +2,10 @@
 
 #include <AP_HAL/AP_HAL_Boards.h>
 
+#if defined(ESP_PLATFORM) && !defined(LUA_32BITS)
+#define LUA_32BITS
+#endif
+
 #ifndef SCRIPTING_DIRECTORY
   // can't use HAL_OS_POSIX_IO here ebcause SITL assumes no APM prefix
   #if HAL_OS_FATFS_IO || HAL_OS_LITTLEFS_IO

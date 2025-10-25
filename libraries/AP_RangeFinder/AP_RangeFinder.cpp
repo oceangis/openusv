@@ -45,7 +45,6 @@
 #include "AP_RangeFinder_PWM.h"
 #include "AP_RangeFinder_GYUS42v2.h"
 #include "AP_RangeFinder_HC_SR04.h"
-#include "AP_RangeFinder_Bebop.h"
 #include "AP_RangeFinder_BLPing.h"
 #include "AP_RangeFinder_DroneCAN.h"
 #include "AP_RangeFinder_Lanbao.h"

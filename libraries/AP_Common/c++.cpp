@@ -131,10 +131,10 @@ __attribute__((constructor(101))) static void hack_in_malloc() {
     }
 }
 
-#elif CONFIG_HAL_BOARD != HAL_BOARD_CHIBIOS && CONFIG_HAL_BOARD != HAL_BOARD_QURT
+#else
+// ChibiOS and QURT removed - ESP32/SITL only
 /*
   wrapper around malloc to ensure all memory is initialised as zero
-  ChibiOS and QURT have their own wrappers
  */
 extern "C" {
     void *__wrap_malloc(size_t size);

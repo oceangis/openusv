@@ -49,11 +49,7 @@
 #define AP_MISSION_MAX_WP_HISTORY           7       // The maximum number of previous wp commands that will be stored from the active missions history
 #define LAST_WP_PASSED (AP_MISSION_MAX_WP_HISTORY-2)
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-#define AP_MISSION_SDCARD_FILENAME "APM/mission.stg"
-#else
-#define AP_MISSION_SDCARD_FILENAME "mission.stg"
-#endif
+// Removed CHIBIOS block
 
 union PackedContent;
 

@@ -54,7 +54,7 @@ public:
     void start_new_log(void) override;
     uint16_t find_oldest_log() override;
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_SITL || CONFIG_HAL_BOARD == HAL_BOARD_LINUX
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL 
     void flush(void) override;
 #endif
     void periodic_1Hz() override;
@@ -77,7 +77,7 @@ private:
     char *_write_filename;
     bool last_log_is_marked_discard;
     uint32_t _last_write_ms;
-#if AP_RTC_ENABLED && CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if AP_RTC_ENABLED && 0 // ChibiOS removed
     bool _need_rtc_update;
 #endif
     

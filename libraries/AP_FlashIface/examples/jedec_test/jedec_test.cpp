@@ -1,42 +1,6 @@
 #include <AP_HAL/AP_HAL.h>
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
-
-const AP_HAL::HAL& hal = AP_HAL::get_HAL();
-void setup() { }
-
-void loop()
-{
-    // the library simply panics if a JEDEC device can't be found.  We
-    // can't really recover from that.
-    hal.console->printf("No JEDEC on linux\n");
-    hal.scheduler->delay(1000);
-}
-
-#else
-
-#include <GCS_MAVLink/GCS_Dummy.h>
-#include <AP_SerialManager/AP_SerialManager.h>
-#include <AP_BoardConfig/AP_BoardConfig.h>
-#include <AP_FlashIface/AP_FlashIface.h>
-#include <stdio.h>
-
-AP_FlashIface_JEDEC jedec_dev;
-const AP_HAL::HAL& hal = AP_HAL::get_HAL();
-
-void setup();
-void loop();
-
-GCS_Dummy _gcs;
-
-
-#ifdef HAL_BOOTLOADER_BUILD
-#define DELAY_MILLIS(x)         do { chThdSleepMilliseconds(x); } while(0)
-#define DELAY_MICROS(x)         do { chThdSleepMicroseconds(x); } while(0)
-#else
-#define DELAY_MILLIS(x)         do { hal.scheduler->delay(x); } while(0)
-#define DELAY_MICROS(x)         do { hal.scheduler->delay_microseconds(x); } while(0)
-#endif
+// Removed LINUX block
 
 static AP_SerialManager serial_manager;
 static AP_BoardConfig board_config;

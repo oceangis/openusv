@@ -32,9 +32,7 @@
 extern const AP_HAL::HAL& hal;
 
 // need the Linux GPIO header for BBB_P8_14
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
-#include <AP_HAL_Linux/GPIO.h>
-#endif
+// Removed LINUX block
 
 #ifdef INS_TIMING_DEBUG
 #include <stdio.h>
@@ -43,7 +41,7 @@ extern const AP_HAL::HAL& hal;
 #define timing_printf(fmt, args...)
 #endif
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
 // hal.console can be accessed from bus threads on ChibiOS
 #define debug(fmt, args ...)  do {hal.console->printf("MPU: " fmt "\n", ## args); } while(0)
 #elif CONFIG_HAL_BOARD == HAL_BOARD_ESP32

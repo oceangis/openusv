@@ -82,6 +82,7 @@
 // disable uncommon stuff that we'd otherwise get 
 #define AP_EXTERNAL_AHRS_ENABLED 0
 #define HAL_GENERATOR_ENABLED 0
+#define AP_DDS_ENABLED 0
 
 #define __LITTLE_ENDIAN  1234
 #define __BYTE_ORDER     __LITTLE_ENDIAN

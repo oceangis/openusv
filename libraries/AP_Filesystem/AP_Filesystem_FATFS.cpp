@@ -9,7 +9,7 @@
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
 #include <stdio.h>
-#include <AP_Common/time.h>
+#include <AP_Common/ap_time.h>
 
 #include <ff.h>
 #include <AP_HAL_ChibiOS/sdcard.h>

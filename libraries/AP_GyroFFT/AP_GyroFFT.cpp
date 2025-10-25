@@ -216,7 +216,7 @@ __INITFUNC__ void AP_GyroFFT::init(uint16_t loop_rate_hz)
 
     // check that we support the window size requested and it is a power of 2
     _window_size.set(1 << lrintf(log2f(_window_size.get())));
-#if defined(STM32H7) || CONFIG_HAL_BOARD == HAL_BOARD_LINUX || CONFIG_HAL_BOARD == HAL_BOARD_SITL
+#if defined(STM32H7)  || CONFIG_HAL_BOARD == HAL_BOARD_SITL
     _window_size.set(constrain_int16(_window_size, 32, 512));
 #else
     _window_size.set(constrain_int16(_window_size, 32, 256));

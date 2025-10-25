@@ -10,7 +10,9 @@
 #include "AP_BattMonitor_SMBus_Generic.h"
 #include "AP_BattMonitor_SMBus_Maxell.h"
 #include "AP_BattMonitor_SMBus_Rotoye.h"
+#if AP_BATTERY_BEBOP_ENABLED
 #include "AP_BattMonitor_Bebop.h"
+#endif
 #include "AP_BattMonitor_ESC.h"
 #include "AP_BattMonitor_SMBus_SUI.h"
 #include "AP_BattMonitor_SMBus_NeoDesign.h"

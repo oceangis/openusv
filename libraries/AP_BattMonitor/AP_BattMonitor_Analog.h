@@ -13,7 +13,7 @@
  # define AP_BATT_CURR_PIN                  HAL_BATT_CURR_PIN
  # define AP_BATT_VOLTDIVIDER_DEFAULT       HAL_BATT_VOLT_SCALE
  # define AP_BATT_CURR_AMP_PERVOLT_DEFAULT  HAL_BATT_CURR_SCALE
-#elif CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#elif 0 // ChibiOS removed
  # define AP_BATT_VOLT_PIN                  4
  # define AP_BATT_CURR_PIN                  3
  # define AP_BATT_VOLTDIVIDER_DEFAULT       10.1f

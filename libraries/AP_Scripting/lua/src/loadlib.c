@@ -598,6 +598,7 @@ static void findloader (lua_State *L, const char *name) {
   if (lua_getfield(L, lua_upvalueindex(1), "searchers") != LUA_TTABLE)
     luaL_error(L, "'package.searchers' must be a table");
   /*  iterate over available searchers to find a loader */
+  int i;
   for (i = 1; ; i++) {
     if (lua_rawgeti(L, 3, i) == LUA_TNIL) {  /* no more searchers? */
       lua_pop(L, 1);  /* remove nil */

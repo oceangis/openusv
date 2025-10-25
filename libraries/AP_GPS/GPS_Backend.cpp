@@ -21,7 +21,7 @@
 #include "GPS_Backend.h"
 #include <AP_Logger/AP_Logger.h>
 #include <time.h>
-#include <AP_Common/time.h>
+#include <AP_Common/ap_time.h>
 #include <AP_InternalError/AP_InternalError.h>
 #include <AP_AHRS/AP_AHRS.h>
 

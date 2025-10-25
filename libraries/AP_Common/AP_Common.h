@@ -28,6 +28,12 @@
 // used to pack structures
 #define PACKED __attribute__((__packed__))
 
+// Provide fallback for ArduPilot-specific debug line macro
+// Some build systems define __AP_LINE__ elsewhere; if not, map to __LINE__
+#ifndef __AP_LINE__
+#define __AP_LINE__ __LINE__
+#endif
+
 #if !defined(CYGWIN_BUILD)
 // used to weaken symbols
 #define WEAK __attribute__((__weak__))

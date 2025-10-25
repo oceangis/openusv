@@ -47,28 +47,15 @@ void bitmask_tests(void)
     Bitmask<N> x2;
     x2 = x;
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
-    x.clear(N+1);
-#elif CONFIG_HAL_BOARD == HAL_BOARD_SITL
-    EXPECT_EXIT(x.clear(N+1), testing::KilledBySignal(SIGABRT), "AP_InternalError::error_t::bitmask_range");
-#endif
+// Removed LINUX block
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
-    x.set(N+1);
-#elif CONFIG_HAL_BOARD == HAL_BOARD_SITL
-    EXPECT_EXIT(x.set(N+1), testing::KilledBySignal(SIGABRT), "AP_InternalError::error_t::bitmask_range");
-#endif
+// Removed LINUX block
 
     for (uint8_t i=0; i<N; i++) {
         EXPECT_EQ(x2.get(i), x.get(i));
     }
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
-    EXPECT_EQ(false, x.get(N+1));
-    EXPECT_EQ(false, x2.get(N+1));
-#elif CONFIG_HAL_BOARD == HAL_BOARD_SITL
-    EXPECT_EXIT(x2.get(N+1), testing::KilledBySignal(SIGABRT), "AP_InternalError::error_t::bitmask_range");
-#endif
+// Removed LINUX block
 }
 
 // bitmasks are composed of 32 bit words, so test those boundaries

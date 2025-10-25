@@ -7,7 +7,7 @@
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
 #include <GCS_MAVLink/GCS.h>
-#include <AP_Common/time.h>
+#include <AP_Common/ap_time.h>
 
 #define DEBUG_RTC_SHIFT 0
 

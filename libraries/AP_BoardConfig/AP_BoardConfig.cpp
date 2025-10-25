@@ -35,7 +35,7 @@
 #define BOARD_TYPE_DEFAULT PX4_BOARD_AUTO
 #endif
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
 #ifndef BOARD_SER1_RTSCTS_DEFAULT
 # define BOARD_SER1_RTSCTS_DEFAULT 2
 #endif
@@ -76,7 +76,7 @@
 #endif
 
 #ifndef HAL_BRD_OPTIONS_DEFAULT
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS && !APM_BUILD_TYPE(APM_BUILD_UNKNOWN) && !APM_BUILD_TYPE(APM_BUILD_Replay)
+#if 0 // ChibiOS removed && !APM_BUILD_TYPE(APM_BUILD_UNKNOWN) && !APM_BUILD_TYPE(APM_BUILD_Replay)
 #ifdef HAL_DEBUG_BUILD
 #define HAL_BRD_OPTIONS_DEFAULT BOARD_OPTION_WATCHDOG | BOARD_OPTION_DEBUG_ENABLE
 #else
@@ -315,7 +315,7 @@ const AP_Param::GroupInfo AP_BoardConfig::var_info[] = {
     AP_GROUPINFO("VSERVO_MIN",    16,     AP_BoardConfig, _vservo_min,  0),
 #endif
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if 0 // ChibiOS removed
     // @Param: SD_SLOWDOWN
     // @DisplayName: microSD slowdown
     // @Description: This is a scaling factor to slow down microSD operation. It can be used on flight board and microSD card combinations where full speed is not reliable. For normal full speed operation a value of 0 should be used.
@@ -465,7 +465,7 @@ void AP_BoardConfig::init()
         hal.scheduler->delay(delay_ms);
     }
     
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS && defined(USE_POSIX)
+#if 0 // ChibiOS removed && defined(USE_POSIX)
     uint8_t slowdown = constrain_int16(_sdcard_slowdown.get(), 0, 32);
     const uint8_t max_slowdown = 8;
     do {

@@ -24,9 +24,7 @@
 
 extern const AP_HAL::HAL &hal;
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
-#include <AP_HAL_Linux/GPIO.h>
-#endif
+// Removed LINUX block
 
 #ifndef LSM303D_DRDY_M_PIN
 #define LSM303D_DRDY_M_PIN -1
