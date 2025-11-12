@@ -61,6 +61,17 @@ public:
 
     void set_default_rate(uint16_t rate_hz) override;
 
+    // Set reversible mask for bidirectional ESC support (e.g., DShot)
+    void set_reversible_mask(uint32_t chanmask) override;
+
+    // Set reversed mask for reversed servo outputs
+    void set_reversed_mask(uint32_t chanmask) override;
+    uint32_t get_reversed_mask() override { return _reversed_mask; }
+
+    // Read last sent PWM value (useful for output feedback)
+    uint16_t read_last_sent(uint8_t chan) override;
+    void read_last_sent(uint16_t* period_us, uint8_t len) override;
+
     /*
        force the safety switch on, disabling PWM output from the IO board
        */
@@ -137,6 +148,10 @@ private:
     uint32_t _pending_mask;
     uint16_t _pending[12];
     uint16_t safe_pwm[12]; // pwm to use when safety is on
+
+    // Channel masks for advanced features
+    uint32_t _reversible_mask = 0; // Channels that support bidirectional output
+    uint32_t _reversed_mask = 0;   // Channels that are reversed
 
     // safety switch state
     AP_HAL::Util::safety_state safety_state;

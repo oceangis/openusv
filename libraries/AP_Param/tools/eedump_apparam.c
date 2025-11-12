@@ -2,19 +2,32 @@
  * Simple tool to dump the AP_Param contents from an EEPROM dump
  * Andrew Tridgell February 2012
  *
+ * NOTE: This utility should only be built as a standalone host-side
+ *       tool. When compiling firmware (e.g. ESP-IDF), leave
+ *       AP_PARAM_EEDUMP_STANDALONE undefined so that the second main()
+ *       implementation is excluded from the image.
+ *
  * Build Command (Assuming starting directory is ardupilot)
- *    gcc -o eedump_ap_param libraries/AP_Param/tools/eedump_apparam.c
- *    gcc -g -o eedump_ap_param libraries/AP_Param/tools/eedump_apparam.c   // With Debugging symbols
+ *    gcc -DAP_PARAM_EEDUMP_STANDALONE -o eedump_ap_param \
+ *        libraries/AP_Param/tools/eedump_apparam.c
+ *    gcc -DAP_PARAM_EEDUMP_STANDALONE -g -o eedump_ap_param \
+ *        libraries/AP_Param/tools/eedump_apparam.c   // With Debugging symbols
  *
  * How to Use?
  *    ./eedump_ap_param eeprom.bin
-*/
+ */
+
+// For firmware builds this file contributes no code, preventing duplicate mains.
+#ifndef AP_PARAM_EEDUMP_STANDALONE
+static void ap_param_eedump_stub(void) __attribute__((unused));
+static void ap_param_eedump_stub(void) {}
+#else
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 
-uint8_t eeprom[0x1000];
+static uint8_t eeprom[0x1000];
 
 struct EEPROM_header {
     uint8_t magic[2];
@@ -43,7 +56,6 @@ static const char *type_names[8] = {
 };
 
 struct Param_header {
-    // to get 9 bits for key we needed to split it into two parts to keep binary compatibility
     uint32_t key_low : 8;
     uint32_t type : 5;
     uint32_t key_high : 1;
@@ -185,3 +197,5 @@ main(int argc, char *argv[])
     }
     return 0;
 }
+
+#endif /* AP_PARAM_EEDUMP_STANDALONE */

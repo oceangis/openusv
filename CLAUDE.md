@@ -1,0 +1,4 @@
+- 日志文件 f:\opensource\usv_esp32\esp32s3rover\ardupilot_rover_esp32s3_idf\log\log.txt
+- 我只针对esp32 s3芯片，使用idf，不要考虑兼容多芯片，避免冗余设计和实现，报纸保持简洁，简单，高效，稳定，
+- ardupilot 路径 f:\opensource\usv_esp32\ardupilot-master
+- 负责分析ardusub的水平移动和定深、定向功能，移植到x型推进器分布的boat船型中，f:\opensource\usv_esp32\ardupilot-master\

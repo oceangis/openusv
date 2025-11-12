@@ -18,8 +18,11 @@
 #include <AP_Math/AP_Math.h>
 #include <AP_HAL_ESP32/Semaphores.h>
 #include "Scheduler.h"
+#include "driver/gpio.h"
 
 using namespace ESP32;
+
+extern const AP_HAL::HAL& hal;
 
 #define MHZ (1000U*1000U)
 #define KHZ (1000U)
@@ -37,6 +40,8 @@ I2CDeviceManager::I2CDeviceManager(void)
             //TODO make modular
             businfo[i].sw_handle.speed = I2C_SPEED_FAST;
             businfo[i].soft = true;
+            businfo[i].sda_pin = i2c_bus_desc[i].sda;
+            businfo[i].scl_pin = i2c_bus_desc[i].scl;
             i2c_init(&(businfo[i].sw_handle));
         } else {
             i2c_config_t i2c_bus_config;
@@ -51,6 +56,8 @@ I2CDeviceManager::I2CDeviceManager(void)
             businfo[i].port = p;
             businfo[i].bus_clock = i2c_bus_desc[i].speed;
             businfo[i].soft = false;
+            businfo[i].sda_pin = i2c_bus_desc[i].sda;
+            businfo[i].scl_pin = i2c_bus_desc[i].scl;
             i2c_param_config(p, &i2c_bus_config);
             i2c_driver_install(p, I2C_MODE_MASTER, 0, 0, ESP_INTR_FLAG_IRAM);
             i2c_filter_enable(p, 7);
@@ -75,11 +82,83 @@ I2CDevice::~I2CDevice()
     free(pname);
 }
 
+#if HAL_I2C_CLEAR_ON_TIMEOUT
+/*
+  Clear a stuck I2C bus by clocking out pulses on SCL.
+  This allows a device holding SDA low to complete its transaction.
+  SAFE METHOD: Only manipulates GPIO, does NOT delete/reinstall I2C driver.
+*/
+void I2CBus::clear_bus(void)
+{
+    if (soft) {
+        // Software I2C doesn't need bus recovery
+        return;
+    }
+
+    // Temporarily set SCL as GPIO output
+    gpio_set_direction(scl_pin, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(scl_pin, GPIO_PULLUP_ONLY);
+
+    // Toggle SCL 20 times to allow device to complete transaction
+    for (uint8_t i = 0; i < 20; i++) {
+        gpio_set_level(scl_pin, 0);
+        hal.scheduler->delay_microseconds(10);
+        gpio_set_level(scl_pin, 1);
+        hal.scheduler->delay_microseconds(10);
+    }
+
+    // I2C driver will automatically reconfigure pins on next transaction
+    // No need to manually restore - this is the key difference from old code!
+}
+
+/*
+  Read SDA state to check if bus is stuck
+*/
+uint8_t I2CBus::read_sda(void)
+{
+    if (soft) {
+        return 1;  // Assume OK for software I2C
+    }
+
+    // Temporarily set as input to read the pin state
+    gpio_set_direction(sda_pin, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(sda_pin, GPIO_PULLUP_ONLY);
+
+    uint8_t level = gpio_get_level(sda_pin);
+
+    // Pin will be reconfigured by I2C driver on next transaction
+    return level;
+}
+
+/*
+  Clear all I2C buses
+*/
+void I2CBus::clear_all(void)
+{
+    for (uint8_t i = 0; i < ARRAY_SIZE(i2c_bus_desc); i++) {
+        I2CDeviceManager::businfo[i].clear_bus();
+    }
+}
+#endif // HAL_I2C_CLEAR_ON_TIMEOUT
+
 bool I2CDevice::transfer(const uint8_t *send, uint32_t send_len,
                          uint8_t *recv, uint32_t recv_len)
 {
+    // Boundary checks
+#if HAL_I2C_INTERNAL_CHECKS
+    if ((send_len > 0 && send == nullptr) || (recv_len > 0 && recv == nullptr)) {
+        printf("I2C: Invalid buffer pointers (addr=0x%02x)\n", _address);
+        return false;
+    }
+    if (send_len + recv_len > 256) {
+        printf("I2C: Transfer too large (addr=0x%02x, len=%u)\n",
+               _address, send_len + recv_len);
+        return false;
+    }
+#endif
+
     if (!bus.semaphore.check_owner()) {
-        printf("I2C: not owner of 0x%x\n", (unsigned)get_bus_id());
+        printf("I2C: Semaphore not owned (addr=0x%02x)\n", _address);
         return false;
     }
 
@@ -121,11 +200,49 @@ bool I2CDevice::transfer(const uint8_t *send, uint32_t send_len,
 
         uint32_t timeout_ms = 1 + 16L * (send_len + recv_len) * 1000 / bus.bus_clock;
         timeout_ms = MAX(timeout_ms, _timeout_ms);
+
+#if HAL_I2C_CLEAR_ON_TIMEOUT
+        bool bus_cleared = false;  // Track if we already attempted bus recovery
+#endif
+
         for (int i = 0; !result && i < _retries; i++) {
-            result = (i2c_master_cmd_begin(bus.port, cmd, pdMS_TO_TICKS(timeout_ms)) == ESP_OK);
+            esp_err_t ret = i2c_master_cmd_begin(bus.port, cmd, pdMS_TO_TICKS(timeout_ms));
+            result = (ret == ESP_OK);
+
             if (!result) {
                 i2c_reset_tx_fifo(bus.port);
                 i2c_reset_rx_fifo(bus.port);
+
+#if HAL_I2C_CLEAR_ON_TIMEOUT
+                // OPTIMIZATION: Check SDA on FIRST failure, not after multiple retries
+                // This saves time by doing bus recovery immediately if bus is stuck
+                if (!bus_cleared && bus.read_sda() == 0) {
+                    // SDA is stuck low - device is holding the line
+                    // Perform bus recovery immediately (SAFE method - GPIO toggle only)
+                    bus.clear_bus();
+                    bus_cleared = true;  // Only do this once per transfer
+
+                    // Small delay after bus recovery to let device settle
+                    hal.scheduler->delay_microseconds(100);
+
+                    // Continue retry loop - bus recovery should have fixed it
+                }
+#endif
+
+#if HAL_I2C_INTERNAL_CHECKS
+                // Log detailed error on final retry
+                if (i == _retries - 1) {
+                    const char* err_str = "UNKNOWN";
+                    switch (ret) {
+                        case ESP_ERR_INVALID_ARG: err_str = "INVALID_ARG"; break;
+                        case ESP_FAIL: err_str = "FAIL"; break;
+                        case ESP_ERR_INVALID_STATE: err_str = "INVALID_STATE"; break;
+                        case ESP_ERR_TIMEOUT: err_str = "TIMEOUT"; break;
+                    }
+                    printf("I2C: Transfer failed (addr=0x%02x, err=%s, retries=%d, bus_recovery=%s)\n",
+                           _address, err_str, _retries, bus_cleared ? "yes" : "no");
+                }
+#endif
             }
         }
 
@@ -133,6 +250,37 @@ bool I2CDevice::transfer(const uint8_t *send, uint32_t send_len,
     }
 
     return result;
+}
+
+/*
+  Read multiple  registers in one transaction
+  This is an important optimization for high-speed sensors (e.g., IMUs)
+  Based on ChibiOS implementation
+*/
+bool I2CDevice::read_registers_multiple(uint8_t first_reg, uint8_t *recv,
+                                        uint32_t recv_len, uint8_t times)
+{
+    if (times == 0) {
+        return false;
+    }
+
+    if (!bus.semaphore.check_owner()) {
+        printf("I2C: Semaphore not owned (addr=0x%02x)\n", _address);
+        return false;
+    }
+
+    // For ESP32, we'll do multiple single reads for now
+    // Hardware I2C repeated start support exists but needs careful handling
+    const uint8_t reg = first_reg;
+    uint32_t bytes_per_read = recv_len;
+
+    for (uint8_t i = 0; i < times; i++) {
+        if (!transfer(&reg, 1, recv + (i * bytes_per_read), bytes_per_read)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 /*

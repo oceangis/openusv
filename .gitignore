@@ -188,3 +188,21 @@ log/
 
 # Temporary files
 nul
+
+# 临时文件和备份
+*.bak
+*.backup
+*.backup_*
+*_backup_*
+build_*.txt
+loglog.txt
+
+# 临时脚本
+optimize_rover_build.py
+copy_missing_libraries.ps1
+final_check.sh
+cleanup_project.sh
+
+# 日志文件
+log/*.txt
+

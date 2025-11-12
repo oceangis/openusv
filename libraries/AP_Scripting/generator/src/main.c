@@ -1,3 +1,8 @@
+#ifndef AP_SCRIPTING_GENERATOR_STANDALONE
+static void ap_scripting_generator_stub(void) __attribute__((unused));
+static void ap_scripting_generator_stub(void) {}
+#else
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -3337,3 +3342,5 @@ int main(int argc, char **argv) {
 
   return 0;
 }
+
+#endif /* AP_SCRIPTING_GENERATOR_STANDALONE */

@@ -1,0 +1,5 @@
+Generated at: 2025年10月30日  8:44:53
+DRONECAN_CXX_WRAPPERS: ENABLED (C++ wrapper classes)
+DSDL namespaces: uavcan, dronecan, ardupilot, com, cuav, mppt
+Python deps: empy, pexpect
+Files: 206 headers, 176 sources

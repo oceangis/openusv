@@ -667,6 +667,76 @@ void AP_MotorsUGV::setup_omni()
         add_omni_motor(1,  0.73205f, 1.0f,  -0.73205f);
         add_omni_motor(2,  0.26795f, 1.0f,   1.0f);
         break;
+
+    // === Boat vectored thrust configurations (10+) ===
+
+    case FRAME_TYPE_BOAT_VECTORED_T:
+        /*
+         * T-Configuration for boats
+         * Layout:
+         *       Bow ↑
+         *
+         *      [M1] ← Front lateral thruster (port/starboard)
+         *        ┃
+         *    [M2]┃[M3] ← Dual rear thrusters (forward/turn)
+         *
+         * Capabilities:
+         * - Forward/reverse: M2+M3 same direction
+         * - Rotate in place: M2+M3 opposite
+         * - Lateral translation: M1 alone
+         * - Excellent docking control
+         */
+        _motors_num = 3;
+
+        // Motor 1: Front lateral thruster (lateral only)
+        // add_omni_motor(motor_num, throttle_factor, steering_factor, lateral_factor)
+        add_omni_motor(0, 0.0, 0.0, 1.0);
+
+        // Motor 2: Left rear thruster (throttle + steering)
+        add_omni_motor(1, 0.5, -0.5, 0.0);
+
+        // Motor 3: Right rear thruster (throttle + steering)
+        add_omni_motor(2, 0.5, 0.5, 0.0);
+
+        gcs().send_text(MAV_SEVERITY_INFO, "Motors: Boat T-config (3 thrusters)");
+        break;
+
+    case FRAME_TYPE_BOAT_VECTORED_X:
+        /*
+         * X-Configuration for boats
+         * Layout:
+         *      Bow ↑
+         *
+         *   M1 ↗  ↖ M2    (45° angles)
+         *      \  /
+         *       \/
+         *       /\
+         *   M3 ↙  ↘ M4
+         *
+         * Capabilities:
+         * - Omnidirectional movement
+         * - Rotate in place
+         * - Diagonal motion most efficient
+         * - Redundant (works with any 3 thrusters)
+         */
+        _motors_num = 4;
+
+        const float cos45 = 0.70710678f;  // cos(45°)
+
+        // Motor 1: Left-front 45°
+        add_omni_motor(0, cos45, -cos45, cos45);
+
+        // Motor 2: Right-front 45°
+        add_omni_motor(1, cos45, cos45, -cos45);
+
+        // Motor 3: Left-rear 45°
+        add_omni_motor(2, -cos45, -cos45, cos45);
+
+        // Motor 4: Right-rear 45°
+        add_omni_motor(3, -cos45, cos45, -cos45);
+
+        gcs().send_text(MAV_SEVERITY_INFO, "Motors: Boat X-config (4 thrusters)");
+        break;
     }
 }
 

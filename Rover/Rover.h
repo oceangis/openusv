@@ -106,6 +106,7 @@ public:
 #if MODE_DOCK_ENABLED
     friend class ModeDock;
 #endif
+    friend class ModePosHold;
 
     friend class RC_Channel_Rover;
     friend class RC_Channels_Rover;
@@ -242,6 +243,7 @@ private:
     ModeGuided mode_guided;
     ModeAuto mode_auto;
     ModeLoiter mode_loiter;
+    ModePosHold mode_poshold;
     ModeSteering mode_steering;
     ModeRTL mode_rtl;
     ModeSmartRTL mode_smartrtl;

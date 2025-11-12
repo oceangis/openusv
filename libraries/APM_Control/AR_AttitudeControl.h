@@ -130,6 +130,40 @@ public:
     // get speed below which vehicle is considered stopped (in m/s)
     float get_stop_speed() const { return MAX(_stop_speed, 0.0f); }
 
+    //
+    // lateral / sideways speed controller (for vectored boats)
+    //
+
+    // return a lateral output from -1 to +1 given a desired lateral speed in m/s
+    // positive speed is to the right
+    // motor_limit should be true if motors have hit their upper or lower limits
+    float get_lateral_out_speed(float desired_lateral_speed, bool motor_limit_left, bool motor_limit_right, float dt);
+
+    // return both forward and lateral outputs for vectored thrust boats
+    // desired_forward_speed: desired forward speed in m/s
+    // desired_lateral_speed: desired lateral speed in m/s (positive = right)
+    // motor_limit: true if motors have hit limits
+    // cruise_speed/cruise_throttle: for forward speed control
+    // forward_out: output forward throttle (-1 to +1)
+    // lateral_out: output lateral throttle (-1 to +1)
+    void get_vectored_out_speed(float desired_forward_speed,
+                                float desired_lateral_speed,
+                                bool motor_limit,
+                                float cruise_speed,
+                                float cruise_throttle,
+                                float dt,
+                                float &forward_out,
+                                float &lateral_out);
+
+    // get latest desired lateral speed recorded during call to get_lateral_out_speed. For reporting purposes only
+    float get_desired_lateral_speed() const;
+
+    // get lateral speed in m/s (earth-frame horizontal velocity but only along vehicle y-axis). returns true on success
+    bool get_lateral_speed(float &lateral_speed) const;
+
+    // low level control accessor for lateral speed PID
+    AC_PID& get_lateral_speed_pid() { return _lateral_speed_pid; }
+
     // relax I terms of throttle and steering controllers
     void relax_I();
 
@@ -183,4 +217,11 @@ private:
     // Sailboat heel control
     AC_PID   _sailboat_heel_pid;    // Sailboat heel angle pid controller
     uint32_t _heel_controller_last_ms = 0;
+
+    // lateral speed control (for vectored boats)
+    AC_PID   _lateral_speed_pid;    // lateral speed controller
+    uint32_t _lateral_last_ms;      // system time of last call to get_lateral_out_speed
+    float    _desired_lateral_speed; // last recorded desired lateral speed
+    bool     _lateral_limit_left;   // lateral output was limited left
+    bool     _lateral_limit_right;  // lateral output was limited right
 };

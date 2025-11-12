@@ -29,6 +29,10 @@
 #include "Storage.h"
 #include "AnalogIn.h"
 #include "Util.h"
+#include "Flash.h"
+#if HAL_NUM_CAN_IFACES
+#include "CANIface.h"
+#endif
 #if AP_SIM_ENABLED
 #include <AP_HAL/SIMState.h>
 #endif
@@ -64,6 +68,7 @@ static ESP32::SPIDeviceManager spiDeviceManager;
 #else
 static Empty::SPIDeviceManager spiDeviceManager;
 #endif
+static Empty::WSPIDeviceManager wspiDeviceManager;
 #if AP_HAL_ANALOGIN_ENABLED
 static ESP32::AnalogIn analogIn;
 #else
@@ -84,7 +89,29 @@ static ESP32::RCInput rcinDriver;
 static ESP32::Scheduler schedulerInstance;
 static ESP32::Util utilInstance;
 static Empty::OpticalFlow opticalFlowDriver;
-static Empty::Flash flashDriver;
+static ESP32::Flash flashDriver;
+
+#if HAL_NUM_CAN_IFACES
+// CAN interface instances
+static ESP32::CANIface canIface0(0);
+#if HAL_NUM_CAN_IFACES > 1
+static ESP32::CANIface canIface1(1);
+#endif
+#if HAL_NUM_CAN_IFACES > 2
+static ESP32::CANIface canIface2(2);
+#endif
+
+// CAN driver array (array of pointers)
+static AP_HAL::CANIface* canDrivers[HAL_NUM_CAN_IFACES] = {
+    &canIface0,
+#if HAL_NUM_CAN_IFACES > 1
+    &canIface1,
+#endif
+#if HAL_NUM_CAN_IFACES > 2
+    &canIface2,
+#endif
+};
+#endif  // HAL_NUM_CAN_IFACES
 
 #if AP_SIM_ENABLED
 static AP_HAL::SIMState xsimstate;
@@ -106,7 +133,7 @@ HAL_ESP32::HAL_ESP32() :
         &serial9Driver, //Extra 5
         &i2cDeviceManager,
         &spiDeviceManager,
-        nullptr,
+        &wspiDeviceManager,
         &analogIn,
         &storageDriver,
         &cons,
@@ -123,7 +150,11 @@ HAL_ESP32::HAL_ESP32() :
 #if HAL_WITH_DSP
         &dspDriver,
 #endif
-        nullptr
+#if HAL_NUM_CAN_IFACES
+        (AP_HAL::CANIface**)canDrivers  // CAN driver array
+#else
+        nullptr  // No CAN support
+#endif
     )
 {}
 

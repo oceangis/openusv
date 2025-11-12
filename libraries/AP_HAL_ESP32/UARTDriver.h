@@ -33,6 +33,8 @@ struct UARTDesc {
     uart_port_t port;
     gpio_num_t rx;
     gpio_num_t tx;
+    gpio_num_t rts;
+    gpio_num_t cts;
 };
 
 class UARTDriver : public AP_HAL::UARTDriver
@@ -77,6 +79,28 @@ public:
 
     uint32_t get_baud_rate() const override { return _baudrate; }
 
+    // Flow control
+    void set_flow_control(enum flow_control flow_control_setting) override;
+    enum flow_control get_flow_control(void) override { return _flow_control; }
+
+    // UART configuration
+    void configure_parity(uint8_t v) override;
+    void set_stop_bits(int n) override;
+    bool set_options(uint16_t options) override;
+    uint16_t get_options(void) const override { return _last_options; }
+
+    // Software RTS/CTS control
+    bool set_RTS_pin(bool high) override;
+    bool set_CTS_pin(bool high) override;
+
+    // Timeout wait
+    bool wait_timeout(uint16_t n, uint32_t timeout_ms) override;
+
+#if HAL_UART_STATS_ENABLED
+    // Statistics
+    void uart_info(ExpandingString &str, StatsTracker &stats, const uint32_t dt_ms) override;
+#endif
+
 private:
     bool _initialized;
     const size_t TX_BUF_SIZE = 1024;
@@ -90,12 +114,33 @@ private:
 
     uint8_t uart_num;
 
+    // Event queue for interrupt-driven UART (replaces polling)
+    QueueHandle_t _uart_event_queue;
+    static const int UART_EVENT_QUEUE_SIZE = 20;
+
+    // DMA support for high-speed UARTs (>115200 baud)
+    bool _use_dma;
+    static const uint32_t DMA_THRESHOLD_BAUDRATE = 115200;
+
     // timestamp for receiving data on the UART, avoiding a lock
     uint64_t _receive_timestamp[2];
     uint8_t _receive_timestamp_idx;
     uint32_t _baudrate;
 
     const tskTaskControlBlock* _uart_owner_thd;
+
+    // Flow control and configuration
+    enum flow_control _flow_control;
+    uint16_t _last_options;
+    uint8_t _parity;
+    uint8_t _stop_bits;
+
+#if HAL_UART_STATS_ENABLED
+    // Statistics
+    uint32_t _tx_stats_bytes;
+    uint32_t _rx_stats_bytes;
+    uint32_t _rx_dropped_bytes;
+#endif
 
     void _receive_timestamp_update(void);
 

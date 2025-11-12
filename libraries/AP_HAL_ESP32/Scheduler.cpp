@@ -40,6 +40,13 @@ bool Scheduler::_initialized = true;
 Scheduler::Scheduler()
 {
     _initialized = false;
+    _priority_boosted = false;
+    _original_priority = 0;
+    _boost_end_time_us = 0;
+    _called_boost = false;
+    _expect_delay_start = 0;
+    _expect_delay_length = 0;
+    last_watchdog_pat_ms = 0;
 }
 
 Scheduler::~Scheduler()
@@ -124,6 +131,13 @@ void Scheduler::init()
         hal.console->printf("FAILED to create task _storage_thread on SLOWCPU\n");
     } else {
     	hal.console->printf("OK created task _storage_thread on SLOWCPU\n");
+    }
+
+    // Create monitor thread for lockup detection (runs on SLOWCPU to avoid interfering with critical tasks)
+    if (xTaskCreatePinnedToCore(_monitor_thread, "APM_MONITOR", MONITOR_SS, this, MONITOR_PRIO, &_monitor_task_handle,SLOWCPU) != pdPASS) {
+        hal.console->printf("FAILED to create task _monitor_thread on SLOWCPU\n");
+    } else {
+        hal.console->printf("OK created task _monitor_thread on SLOWCPU\n");
     }
 
     //   xTaskCreatePinnedToCore(_print_profile, "APM_PROFILE", IO_SS, this, IO_PRIO, nullptr,SLOWCPU);
@@ -223,6 +237,64 @@ void IRAM_ATTR Scheduler::delay_microseconds(uint16_t us)
 
         vTaskDelay((us+tick-1)/tick);
     }
+}
+
+/*
+  Delay with priority boost
+  Based on ChibiOS implementation - boosts main thread priority
+  to ensure it runs immediately after the delay
+ */
+void IRAM_ATTR Scheduler::delay_microseconds_boost(uint16_t us)
+{
+    if (!in_main_thread()) {
+        // Only boost main thread
+        delay_microseconds(us);
+        return;
+    }
+
+    if (!_priority_boosted) {
+        // Save current priority and boost
+        TaskHandle_t current_task = xTaskGetCurrentTaskHandle();
+        _original_priority = uxTaskPriorityGet(current_task);
+
+        // Boost to MAIN_PRIO_BOOST (modest increase, not maximum)
+        vTaskPrioritySet(current_task, MAIN_PRIO_BOOST);
+        _priority_boosted = true;
+        _called_boost = true;  // Mark that boost was called
+    }
+
+    // Perform the delay
+    delay_microseconds(us);
+}
+
+/*
+  End priority boost
+  Called explicitly or automatically
+ */
+void IRAM_ATTR Scheduler::boost_end(void)
+{
+    if (!_priority_boosted || !in_main_thread()) {
+        return;
+    }
+
+    TaskHandle_t current_task = xTaskGetCurrentTaskHandle();
+
+    // Restore original priority
+    vTaskPrioritySet(current_task, _original_priority);
+    _priority_boosted = false;
+}
+
+/*
+  Check if delay_microseconds_boost() was called since last check
+  Used to determine if we should yield to lower priority tasks
+ */
+bool Scheduler::check_called_boost(void)
+{
+    if (!_called_boost) {
+        return false;
+    }
+    _called_boost = false;
+    return true;
 }
 
 void IRAM_ATTR Scheduler::register_timer_process(AP_HAL::MemberProc proc)
@@ -512,6 +584,51 @@ uint16_t IRAM_ATTR Scheduler::get_loop_rate_hz(void)
     return _active_loop_rate_hz;
 }
 
+/*
+  Get stack free space for a task
+*/
+uint32_t Scheduler::get_stack_free(TaskHandle_t task)
+{
+    if (task == nullptr) {
+        return 0;
+    }
+    return uxTaskGetStackHighWaterMark(task);
+}
+
+/*
+  Monitor stack usage of all threads
+  Warns if any thread is using more than 80% of its stack
+*/
+void Scheduler::monitor_stack_usage(void)
+{
+    struct {
+        TaskHandle_t* handle;
+        const char* name;
+        uint32_t stack_size;
+    } tasks[] = {
+        {&_main_task_handle, "Main", MAIN_SS},
+        {&_timer_task_handle, "Timer", TIMER_SS},
+        {&_rcin_task_handle, "RCIn", RCIN_SS},
+        {&_rcout_task_handle, "RCOut", RCOUT_SS},
+        {&_uart_task_handle, "UART", UART_SS},
+        {&_io_task_handle, "IO", IO_SS},
+        {&_storage_task_handle, "Storage", STORAGE_SS},
+    };
+
+    for (uint8_t i = 0; i < ARRAY_SIZE(tasks); i++) {
+        if (tasks[i].handle && *tasks[i].handle) {
+            uint32_t free_stack = get_stack_free(*tasks[i].handle);
+            uint32_t used_stack = tasks[i].stack_size - free_stack;
+            uint8_t usage_percent = (used_stack * 100) / tasks[i].stack_size;
+
+            if (usage_percent > 80) {
+                printf("WARNING: %s thread stack usage: %u%% (%u/%u bytes)\n",
+                       tasks[i].name, usage_percent, used_stack, tasks[i].stack_size);
+            }
+        }
+    }
+}
+
 // once every 60 seconds, print some stats...
 void Scheduler::print_stats(void)
 {
@@ -521,6 +638,10 @@ void Scheduler::print_stats(void)
         vTaskGetRunTimeStats(buffer);
         printf("\n\n%s\n", buffer);
         heap_caps_print_heap_info(0);
+
+        // Monitor stack usage
+        monitor_stack_usage();
+
         last_run = AP_HAL::millis64();
     }
 
@@ -565,7 +686,21 @@ void IRAM_ATTR Scheduler::_main_thread(void *arg)
 #endif
     while (true) {
         sched->callbacks->loop();
+
+        /*
+          Give up 50 microseconds of time if the loop hasn't
+          called delay_microseconds_boost(), to ensure low priority
+          drivers get a chance to run. Calling delay_microseconds_boost()
+          means we have already given up time from the main loop.
+         */
+        if (!sched->check_called_boost()) {
+            sched->delay_microseconds(50);
+        }
+
         sched->delay_microseconds(250);
+
+        // Update watchdog pat time for monitor thread
+        sched->last_watchdog_pat_ms = AP_HAL::millis();
 
         // run stats periodically
 #ifdef SCHEDDEBUG
@@ -576,6 +711,194 @@ void IRAM_ATTR Scheduler::_main_thread(void *arg)
         if (ESP_OK != esp_task_wdt_reset()) {
             printf("esp_task_wdt_reset() failed\n");
         };
+    }
+}
+
+/*
+  Monitor thread - detects software lockups and main loop delays
+  Based on ChibiOS implementation, adapted for ESP32/FreeRTOS
+*/
+void IRAM_ATTR Scheduler::_monitor_thread(void *arg)
+{
+    Scheduler *sched = (Scheduler *)arg;
+
+    // Wait for system initialization
+    while (!sched->_initialized) {
+        sched->delay(100);
+    }
+
+    hal.console->printf("Monitor thread started\n");
+
+    while (true) {
+        sched->delay(100);  // Check every 100ms
+
+        uint32_t now = AP_HAL::millis();
+        uint32_t loop_delay = now - sched->last_watchdog_pat_ms;
+
+        // Check for main loop stuck
+        if (loop_delay >= 200 && loop_delay < 500) {
+            // Main loop stuck for 200-500ms - warning level
+            hal.console->printf("WARNING: Main loop delay %ums\n", (unsigned)loop_delay);
+        }
+        else if (loop_delay >= 500 && !sched->in_expected_delay()) {
+            // Main loop stuck for >500ms and not in expected delay - critical
+            hal.console->printf("CRITICAL: Main loop stuck %ums!\n", (unsigned)loop_delay);
+
+            // Log to help debug
+            hal.console->printf("  System state:\n");
+            hal.console->printf("  - Free heap: %u bytes\n", (unsigned)hal.util->available_memory());
+
+            // Try to recover by logging stack info
+            sched->monitor_stack_usage();
+
+            // Check for deadlock in critical tasks
+            sched->check_for_deadlock();
+        }
+
+        // Periodic checks (every 5 seconds via internal rate limiting)
+        sched->check_task_starvation();
+
+        // Additional watchdog safety - pat the watchdog from monitor thread if main is stuck
+        // This prevents full system reset while we're trying to diagnose
+        if (loop_delay > 1000) {
+            // Main loop completely stuck, pat watchdog to prevent reset during diagnosis
+            esp_task_wdt_reset();
+        }
+    }
+}
+
+/*
+  Set expected delay - used to suppress watchdog warnings during known long operations
+*/
+void Scheduler::expect_delay_ms(uint32_t ms)
+{
+    if (ms == 0) {
+        _expect_delay_length = 0;
+        _expect_delay_start = 0;
+    } else {
+        _expect_delay_start = AP_HAL::millis();
+        _expect_delay_length = ms;
+    }
+}
+
+/*
+  Check if we are in an expected delay period
+*/
+bool Scheduler::in_expected_delay(void) const
+{
+    if (_expect_delay_length == 0) {
+        return false;
+    }
+    uint32_t now = AP_HAL::millis();
+    if (now - _expect_delay_start > _expect_delay_length) {
+        return false;
+    }
+    return true;
+}
+
+/*
+  Dynamic priority management - adjust task priority at runtime
+  This allows adaptive priority control based on system load
+*/
+bool Scheduler::adjust_task_priority(TaskHandle_t task, int8_t priority_delta)
+{
+    if (task == nullptr) {
+        return false;
+    }
+
+    UBaseType_t current_priority = uxTaskPriorityGet(task);
+    int new_priority = (int)current_priority + priority_delta;
+
+    // Clamp priority to valid range (1-24, avoid idle=0 and max=25)
+    new_priority = constrain_int16(new_priority, 1, configMAX_PRIORITIES - 1);
+
+    vTaskPrioritySet(task, (UBaseType_t)new_priority);
+    return true;
+}
+
+/*
+  Get task priority
+*/
+UBaseType_t Scheduler::get_task_priority(TaskHandle_t task)
+{
+    if (task == nullptr) {
+        return 0;
+    }
+    return uxTaskPriorityGet(task);
+}
+
+/*
+  Deadlock detection - check if any critical tasks are blocked
+  Based on FreeRTOS task states
+*/
+void Scheduler::check_for_deadlock(void)
+{
+    struct {
+        TaskHandle_t* handle;
+        const char* name;
+        bool critical;  // Critical tasks must not be blocked long
+    } tasks[] = {
+        {&_main_task_handle, "Main", true},
+        {&_timer_task_handle, "Timer", true},
+        {&_uart_task_handle, "UART", false},
+        {&_rcin_task_handle, "RCIn", false},
+    };
+
+    for (uint8_t i = 0; i < ARRAY_SIZE(tasks); i++) {
+        if (tasks[i].handle && *tasks[i].handle && tasks[i].critical) {
+            eTaskState state = eTaskGetState(*tasks[i].handle);
+
+            // Blocked or suspended critical tasks indicate potential deadlock
+            if (state == eBlocked || state == eSuspended) {
+                hal.console->printf("WARNING: Critical task %s is %s\n",
+                                  tasks[i].name,
+                                  state == eBlocked ? "blocked" : "suspended");
+            }
+        }
+    }
+}
+
+/*
+  Task starvation monitoring - detect tasks not getting CPU time
+  Uses FreeRTOS runtime stats to track CPU usage
+*/
+void Scheduler::check_task_starvation(void)
+{
+    static uint32_t last_check_time = 0;
+    static uint32_t last_runtime[10] = {0};  // Track runtime for up to 10 tasks
+
+    uint32_t now = AP_HAL::millis();
+    if (now - last_check_time < 5000) {  // Check every 5 seconds
+        return;
+    }
+    last_check_time = now;
+
+    struct {
+        TaskHandle_t* handle;
+        const char* name;
+        uint8_t index;
+    } tasks[] = {
+        {&_main_task_handle, "Main", 0},
+        {&_timer_task_handle, "Timer", 1},
+        {&_uart_task_handle, "UART", 2},
+        {&_io_task_handle, "IO", 3},
+        {&_storage_task_handle, "Storage", 4},
+    };
+
+    for (uint8_t i = 0; i < ARRAY_SIZE(tasks); i++) {
+        if (tasks[i].handle && *tasks[i].handle) {
+            TaskStatus_t task_status;
+            vTaskGetInfo(*tasks[i].handle, &task_status, pdTRUE, eInvalid);
+
+            uint32_t runtime_delta = task_status.ulRunTimeCounter - last_runtime[tasks[i].index];
+            last_runtime[tasks[i].index] = task_status.ulRunTimeCounter;
+
+            // If runtime hasn't increased, task might be starved
+            if (runtime_delta == 0 && task_status.eCurrentState == eReady) {
+                hal.console->printf("WARNING: Task %s may be starved (ready but not running)\n",
+                                  tasks[i].name);
+            }
+        }
     }
 }
 

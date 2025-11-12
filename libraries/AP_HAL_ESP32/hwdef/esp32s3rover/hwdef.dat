@@ -1,0 +1,147 @@
+# ESP32-S3 Rover with ICM20948 and DroneCAN Support
+# Hardware: ESP32-S3-N16R8 (16MB Flash, 8MB PSRAM)
+# Application: USV Rover with ICM20948 IMU and sensor integration
+
+define HAL_ESP32_BOARD_NAME "esp32s3-rover-dronecan"
+
+# ========================================================================
+# IMU / Compass Configuration - ICM20948
+# ========================================================================
+
+# ICM20948 + AK09916 on I2C bus 0 @ 0x68/0x0C
+define HAL_INS_DEFAULT HAL_INS_ICM20XXX_I2C
+define HAL_INS_ICM20XXX_I2C_BUS 0
+define HAL_INS_ICM20XXX_I2C_ADDR (0x68)
+define INS_MAX_INSTANCES 3
+
+define HAL_COMPASS_ICM20948_I2C_ADDR (0x68)
+define HAL_COMPASS_AK09916_I2C_BUS 0
+define HAL_COMPASS_AK09916_I2C_ADDR (0x0C)
+define HAL_COMPASS_MAX_SENSORS 3
+define AP_COMPASS_ICM20948_ENABLED 1
+define HAL_PROBE_EXTERNAL_I2C_COMPASSES 1
+
+IMU Invensensev2 I2C:0:0x68 ROTATION_NONE
+COMPASS AK09916:probe_ICM20948_I2C 0 ROTATION_NONE
+
+# Allow boot without barometer (USV doesn't need barometer)
+define HAL_BARO_ALLOW_INIT_NO_BARO 1
+
+# ========================================================================
+# Serial Port Configuration
+# ========================================================================
+
+# UART0: USB Serial (GPIO44/43) - MAVLink telemetry, console
+define DEFAULT_SERIAL0_PROTOCOL SerialProtocol_MAVLink2
+define DEFAULT_SERIAL0_BAUD 115200
+
+# UART1: GPS (GPIO17/18) - u-blox @ 38400 baud
+define DEFAULT_SERIAL3_PROTOCOL SerialProtocol_GPS
+define DEFAULT_SERIAL3_BAUD 38400
+
+# UART2: DST800 Depth Sounder (RS485, 4800 baud)
+define DEFAULT_SERIAL2_PROTOCOL SerialProtocol_None
+define DEFAULT_SERIAL2_BAUD 4800
+
+# Additional UARTs for sensors
+define DEFAULT_SERIAL4_PROTOCOL SerialProtocol_None
+define DEFAULT_SERIAL4_BAUD 9600
+
+define DEFAULT_SERIAL5_PROTOCOL SerialProtocol_None
+define DEFAULT_SERIAL5_BAUD 115200
+
+# GPS Configuration
+define GPS_TYPE 1
+define GPS_TYPE2 0
+define AP_GPS_UBLOX_ENABLED 1
+define GPS_MAX_RECEIVERS 2
+define GPS_MAX_INSTANCES 2
+
+# ========================================================================
+# Hardware Pin Mapping
+# ========================================================================
+
+# UART GPIO Pin Mapping
+ESP32_SERIAL  UART_NUM_0  GPIO_NUM_44  GPIO_NUM_43
+ESP32_SERIAL  UART_NUM_1  GPIO_NUM_17  GPIO_NUM_18
+ESP32_SERIAL  UART_NUM_2  GPIO_NUM_16  GPIO_NUM_15
+
+# I2C bus with SDA=8 / SCL=9 (INT=GPIO15 if interrupt used) for the ICM20948 IMU
+ESP32_I2CBUS  I2C_NUM_0  GPIO_NUM_8  GPIO_NUM_9  400*KHZ  true  false
+
+# SPI bus (virtual - required for SPIDeviceManager)
+ESP32_SPIBUS  SPI3_HOST  SPI_DMA_CH_AUTO  GPIO_NUM_NC  GPIO_NUM_NC  GPIO_NUM_NC
+
+# Dummy SPI device (virtual - required for compilation)
+ESP32_SPIDEV  dummy  0  0  GPIO_NUM_NC  0  1*MHZ  1*MHZ
+
+# ========================================================================
+# DroneCAN Configuration
+# ========================================================================
+
+# DroneCAN / CAN on GPIO47(TX) / GPIO38(RX)
+ESP32_CAN  TWAI_NUM_0  GPIO_NUM_47  GPIO_NUM_38  1000000
+define HAL_NUM_CAN_IFACES 1
+define HAL_ENABLE_DRONECAN_DRIVERS 1
+define AP_DRONECAN_ENABLED 1
+define HAL_CANMANAGER_ENABLED 1
+
+# DroneCAN features
+define HAL_DRONECAN_DNA_ENABLED 1
+define HAL_DRONECAN_SEND_GPS 1
+define HAL_DRONECAN_SEND_COMPASS 1
+
+# CAN buffer sizes
+define HAL_CAN_RX_QUEUE_SIZE 128
+define HAL_CAN_TX_QUEUE_SIZE 32
+
+# ========================================================================
+# RC Output (optional - for motor control)
+# ========================================================================
+
+# RC output pins (6 channels) - adjust if needed
+ESP32_RCOUT GPIO_NUM_11
+ESP32_RCOUT GPIO_NUM_10
+ESP32_RCOUT GPIO_NUM_7
+ESP32_RCOUT GPIO_NUM_6
+
+# RC input - virtual pin for compilation
+define HAL_ESP32_RMT_RX_PIN_NUMBER GPIO_NUM_NC
+
+# ========================================================================
+# Performance Tuning
+# ========================================================================
+
+define HAL_SCHEDULER_LOOP_RATE 400
+define HAL_SCHEDULER_MAX_THREADS 8
+define HAL_THREAD_STACK_SIZE 16384
+
+define HAL_WITH_PSRAM 1
+define HAL_PSRAM_HEAP_SIZE (6 * 1024 * 1024)
+
+# ========================================================================
+# Feature Flags
+# ========================================================================
+
+define AP_ROVER_ENABLED 1
+define MODE_GUIDED_ENABLED 1
+define MODE_AUTO_ENABLED 1
+define MODE_RTL_ENABLED 1
+
+define HAL_LOGGING_ENABLED 1
+define HAL_OS_POSIX_IO 1
+define HAL_CONSOLE_ENABLED 1
+
+# Logging defaults (no SD slot)
+define HAVE_FILESYSTEM_SUPPORT 0
+define HAL_ESP32_SDMMC 0
+define HAL_ESP32_SDCARD 0
+define LOGGER_MAVLINK_SUPPORT 1
+define HAL_LOGGING_BACKENDS_DEFAULT 1
+
+# ========================================================================
+# Power Management
+# ========================================================================
+
+define HAL_ESP32_GPIO_WEATHER_PWR GPIO_NUM_12
+define HAL_ESP32_ENABLE_LIGHT_SLEEP 0

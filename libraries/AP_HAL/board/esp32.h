@@ -45,9 +45,9 @@
 
 #define HAL_BOARD_NAME "ESP32"
 #define HAL_CPU_CLASS HAL_CPU_CLASS_150
-#define HAL_WITH_DRONECAN 0
-#define HAL_WITH_UAVCAN 0
-#define HAL_MAX_CAN_PROTOCOL_DRIVERS 0
+#define HAL_WITH_DRONECAN 1
+#define HAL_WITH_UAVCAN 1
+#define HAL_MAX_CAN_PROTOCOL_DRIVERS 1
 #define HAL_HAVE_SAFETY_SWITCH 0
 #define HAL_HAVE_BOARD_VOLTAGE 0
 #define HAL_HAVE_SERVO_VOLTAGE 0
@@ -66,6 +66,13 @@
 #include <AP_HAL_ESP32/Semaphores.h>
 #define HAL_Semaphore ESP32::Semaphore
 #define HAL_BinarySemaphore ESP32::BinarySemaphore
+
+// Forward declare ESP32::CANIface and define HAL_CANIface typedef
+// Cannot include HAL_ESP32_Class.h here due to circular dependency
+#include <AP_HAL_ESP32/HAL_ESP32_Namespace.h>
+#if HAL_NUM_CAN_IFACES
+typedef ESP32::CANIface HAL_CANIface;
+#endif
 #endif
 
 #ifndef HAL_HAVE_HARDWARE_DOUBLE
@@ -76,7 +83,7 @@
 #define HAL_WITH_EKF_DOUBLE HAL_HAVE_HARDWARE_DOUBLE
 #endif
 
-#define HAL_NUM_CAN_IFACES 0
+#define HAL_NUM_CAN_IFACES 1
 #define HAL_MEM_CLASS HAL_MEM_CLASS_192
 
 // disable uncommon stuff that we'd otherwise get 

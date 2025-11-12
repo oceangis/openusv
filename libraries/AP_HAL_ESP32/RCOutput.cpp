@@ -612,3 +612,43 @@ void RCOutput::set_failsafe_pwm(uint32_t chmask, uint16_t period_us)
 {
     //RIP (not the pointer)
 }
+
+/*
+  Set channels that support bidirectional output (e.g., DShot)
+  This is used for reversible ESCs
+*/
+void RCOutput::set_reversible_mask(uint32_t chanmask)
+{
+    _reversible_mask |= chanmask;
+}
+
+/*
+  Set channels that are reversed in output
+  This applies servo reversal
+*/
+void RCOutput::set_reversed_mask(uint32_t chanmask)
+{
+    _reversed_mask |= chanmask;
+}
+
+/*
+  Read last sent PWM value
+  This returns the last value written, not the hardware readback
+*/
+uint16_t RCOutput::read_last_sent(uint8_t chan)
+{
+    if (chan >= MAX_CHANNELS) {
+        return 0;
+    }
+    return pwm_chan_list[chan].value;
+}
+
+/*
+  Read array of last sent PWM values
+*/
+void RCOutput::read_last_sent(uint16_t* period_us, uint8_t len)
+{
+    for (uint8_t i = 0; i < MIN(len, MAX_CHANNELS); i++) {
+        period_us[i] = pwm_chan_list[i].value;
+    }
+}

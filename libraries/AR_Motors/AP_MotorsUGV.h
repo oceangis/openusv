@@ -21,13 +21,24 @@ public:
         MOTOR_TEST_LAST
     };
 
-    // supported omni motor configurations
+    // Motor frame types for different vehicle configurations
     enum frame_type {
+        // Universal - works for all vehicle types
         FRAME_TYPE_UNDEFINED = 0,
-        FRAME_TYPE_OMNI3 = 1,
-        FRAME_TYPE_OMNIX = 2,
-        FRAME_TYPE_OMNIPLUS = 3,
-        FRAME_TYPE_OMNI3MECANUM = 4,
+
+        // Ground vehicle omni-directional configurations (1-9)
+        // These use omniwheels or mecanum wheels for holonomic movement
+        FRAME_TYPE_OMNI3 = 1,              // Three omni wheels in triangle
+        FRAME_TYPE_OMNIX = 2,              // Four wheels in X pattern
+        FRAME_TYPE_OMNIPLUS = 3,           // Four wheels in + pattern
+        FRAME_TYPE_OMNI3MECANUM = 4,       // Three mecanum wheels
+        // Reserved 5-9 for future ground vehicle configurations
+
+        // Boat vectored thrust configurations (10+)
+        // These use multiple thrusters for boat maneuvering
+        FRAME_TYPE_BOAT_VECTORED_T = 10,   // T-configuration: dual rear + front lateral
+        FRAME_TYPE_BOAT_VECTORED_X = 11,   // X-configuration: four 45° thrusters
+        // Reserved 12+ for future boat configurations
     };
 
     // initialise motors
@@ -114,6 +125,12 @@ public:
 
     // returns true if the vehicle is omni
     bool is_omni() const { return _frame_type != FRAME_TYPE_UNDEFINED && _motors_num > 0; }
+
+    // returns true if the vehicle uses boat vectored thrust
+    bool is_boat_vectored() const {
+        return _frame_type == FRAME_TYPE_BOAT_VECTORED_T ||
+               _frame_type == FRAME_TYPE_BOAT_VECTORED_X;
+    }
 
     // Return the relay index that would be used for param conversion to relay functions
     bool get_legacy_relay_index(int8_t &index1, int8_t &index2, int8_t &index3, int8_t &index4) const;

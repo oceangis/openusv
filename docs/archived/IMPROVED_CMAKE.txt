@@ -1,0 +1,77 @@
+# 改进版 CMakeLists.txt 使用指南
+
+## 📋 改进要点
+
+当前的 CMakeLists.txt 需要手动生成 hwdef.h，改进版将自动完成这一步骤。
+
+### 当前方式（手动）
+1. cd libraries/AP_HAL_ESP32/hwdef/esp32s3_icm20948
+2. python ../scripts/esp32_hwdef.py hwdef.dat -o ../hwdef.h
+3. cd ../../../../
+4. idf.py build
+
+### 改进方式（自动）
+1. 编辑 CMakeLists.txt，修改一行：set(BOARD_NAME "esp32s3_icm20948")
+2. idf.py build  ← CMake 自动生成 hwdef.h
+
+## 🎯 改进版 CMakeLists.txt 已保存
+
+改进版的完整代码已经在文档中提供：
+- 查看 CMAKE_VS_HWDEF_ANALYSIS.md 中的 "实现代码" 部分
+- 完整的改进版 CMakeLists.txt 代码
+
+## 📝 应用步骤
+
+### 方式1: 手动复制（推荐）
+
+1. 打开 CMAKE_VS_HWDEF_ANALYSIS.md
+2. 找到 "改进的 CMakeLists.txt" 完整代码
+3. 复制全部内容
+4. 覆盖当前的 CMakeLists.txt
+
+### 方式2: 使用备份文件
+
+如果你已经应用了改进版：
+```bash
+# 当前版本已备份为
+CMakeLists.txt.manual_hwdef
+
+# 恢复手动版本
+cp CMakeLists.txt.manual_hwdef CMakeLists.txt
+
+# 应用改进版本
+# (手动复制 CMAKE_VS_HWDEF_ANALYSIS.md 中的代码)
+```
+
+## ✅ 验证改进版是否生效
+
+运行 idf.py 配置时应该看到：
+```
+-- Generating hwdef.h for board: esp32s3_icm20948
+-- hwdef.h generated successfully
+-- Board: esp32s3_icm20948 (SUBTYPE=6008)
+```
+
+## 🎉 改进版优势
+
+1. **单一配置点** - 只需修改 BOARD_NAME
+2. **自动生成** - 不再需要手动运行 Python
+3. **错误检测** - 板名错误时立即提示可用板型
+4. **完全一致** - hwdef.h 和 SUBTYPE 自动匹配
+
+## 📊 快速切换板子
+
+### 当前方式（5步）
+1. 修改 CMakeLists.txt (CONFIG_HAL_BOARD_SUBTYPE)
+2. cd libraries/AP_HAL_ESP32/hwdef/目标板子
+3. python ../scripts/esp32_hwdef.py hwdef.dat -o ../hwdef.h
+4. cd ../../../../
+5. idf.py build
+
+### 改进方式（1步）
+1. 修改 CMakeLists.txt 第11行：set(BOARD_NAME "目标板子名")
+2. idf.py build  ← 自动完成其他所有步骤！
+
+---
+
+查看 CMAKE_VS_HWDEF_ANALYSIS.md 获取完整的分析和实现代码！

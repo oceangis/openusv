@@ -41,9 +41,14 @@ public:
     bool healthy(void) override;
     bool get_storage_ptr(void *&ptr, size_t &size) override;
 
+    // Enhanced integrity checking
+    bool verify_storage_integrity(void);
+    uint32_t calculate_checksum(const uint8_t *data, size_t length);
+
 private:
     volatile bool _initialised;
     const esp_partition_t *p;
+    bool _use_empty_storage = false;  // Fallback to empty storage if partition not found
     void _storage_open(void);
     void _mark_dirty(uint16_t loc, uint16_t length);
     uint8_t _buffer[STORAGE_SIZE] __attribute__((aligned(4)));
@@ -56,6 +61,9 @@ private:
     bool _flash_failed;
     uint32_t _last_re_init_ms;
     uint32_t _last_empty_ms;
+    uint32_t _storage_checksum;      // Checksum for integrity verification
+    uint32_t _write_count;           // Total write operations count
+    uint32_t _verify_fail_count;     // Failed verification count
 
     AP_FlashStorage _flash{_buffer,
                         STORAGE_SECTOR_SIZE,

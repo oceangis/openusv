@@ -54,6 +54,34 @@ public:
     // request information on running threads
     void thread_info(ExpandingString &str) override;
 
+    // request information on dma contention
+    void dma_info(ExpandingString &str) override;
+
+    // request information on memory allocation
+    void mem_info(ExpandingString &str) override;
+
+    // request information on timer frequencies
+    void timer_info(ExpandingString &str) override;
+
+    // generate Random values
+    bool get_random_vals(uint8_t* data, size_t size) override;
+
+    // generate Random values, will block until enough entropy is available
+    bool get_true_random_vals(uint8_t* data, size_t size, uint32_t timeout_us) override;
+
+#if HAL_UART_STATS_ENABLED
+    // request information on uart I/O
+    void uart_info(ExpandingString &str) override;
+
+#if HAL_LOGGING_ENABLED
+    // Log UART message for each serial port
+    void uart_log() override;
+#endif
+#endif // HAL_UART_STATS_ENABLED
+
+    // get the system load
+    bool get_system_load(float& avg_load, float& peak_load) const override;
+
 private:
 #ifdef HAL_PWM_ALARM
     struct ToneAlarmPwmGroup {

@@ -21,7 +21,7 @@
 #include <AP_InternalError/AP_InternalError.h>
 #include <stdio.h>
 
-#define FLASHSTORAGE_DEBUG 0
+#define FLASHSTORAGE_DEBUG 1
 
 #if FLASHSTORAGE_DEBUG
 #define debug(fmt, args...)  do { printf(fmt, ##args); } while(0)

@@ -32,6 +32,11 @@
 #include <GCS_MAVLink/GCS.h>
 // Removed LINUX block
 
+// Include platform-specific CAN interface implementation
+#if CONFIG_HAL_BOARD == HAL_BOARD_ESP32
+#include <AP_HAL_ESP32/CANIface.h>
+#endif
+
 #include <AP_Common/ExpandingString.h>
 #include <AP_Common/sorting.h>
 #include <AP_Logger/AP_Logger.h>

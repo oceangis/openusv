@@ -36,6 +36,15 @@
 #include <AP_Common/ExpandingString.h>
 
 #include "esp_mac.h"
+#include "esp_random.h"
+#include "soc/rtc.h"
+#include "esp_private/esp_clk.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+#if HAL_UART_STATS_ENABLED
+#include "UARTDriver.h"
+#endif
 
 extern const AP_HAL::HAL& hal;
 
@@ -225,9 +234,231 @@ void Util::thread_info(ExpandingString &str)
     // a header to allow for machine parsers to determine format
     str.printf("ThreadsV1\n");
 
-    //    char buffer[1024];
-    //    vTaskGetRunTimeStats(buffer);
-    //    snprintf(buf, bufsize,"\n\n%s\n", buffer);
+    // Get number of tasks
+    UBaseType_t task_count = uxTaskGetNumberOfTasks();
+
+    // Allocate array for task status
+    TaskStatus_t *task_status_array = (TaskStatus_t *)malloc(task_count * sizeof(TaskStatus_t));
+    if (task_status_array == nullptr) {
+        return;
+    }
+
+    // Get task information
+    uint32_t total_runtime;
+    task_count = uxTaskGetSystemState(task_status_array, task_count, &total_runtime);
+
+    // Print header
+    str.printf("%-20s %8s %8s %8s %4s\n", "Name", "Stack", "Priority", "Runtime", "Core");
+
+    // Print each task
+    for (UBaseType_t i = 0; i < task_count; i++) {
+        TaskStatus_t *task = &task_status_array[i];
+
+        // Calculate stack usage
+        uint32_t stack_free = task->usStackHighWaterMark;
+
+        // Get core affinity (ESP32 specific)
+        int core = -1;
+#if CONFIG_FREERTOS_UNICORE
+        core = 0;
+#else
+        BaseType_t task_core = xTaskGetAffinity(task->xHandle);
+        if (task_core == tskNO_AFFINITY) {
+            core = -1;
+        } else {
+            core = task_core;
+        }
+#endif
+
+        str.printf("%-20s %8lu %8lu %8lu %4d\n",
+                   task->pcTaskName,
+                   (unsigned long)stack_free,
+                   (unsigned long)task->uxCurrentPriority,
+                   (unsigned long)task->ulRunTimeCounter,
+                   core);
+    }
+
+    free(task_status_array);
+}
+
+/*
+  Display DMA contention information
+ */
+void Util::dma_info(ExpandingString &str)
+{
+    str.printf("DMA Info:\n");
+    str.printf("ESP32 uses internal DMA controllers\n");
+
+    // Get DMA-capable memory info
+    size_t dma_free = heap_caps_get_free_size(MALLOC_CAP_DMA);
+    size_t dma_total = heap_caps_get_total_size(MALLOC_CAP_DMA);
+    size_t dma_largest = heap_caps_get_largest_free_block(MALLOC_CAP_DMA);
+
+    str.printf("DMA Memory: free=%lu total=%lu largest_block=%lu\n",
+               (unsigned long)dma_free,
+               (unsigned long)dma_total,
+               (unsigned long)dma_largest);
+}
+
+/*
+  Display memory allocation information
+ */
+void Util::mem_info(ExpandingString &str)
+{
+    str.printf("Memory Info:\n");
+
+    // Get heap info for different memory types
+    multi_heap_info_t heap_info;
+
+    // Default heap (MALLOC_CAP_8BIT)
+    heap_caps_get_info(&heap_info, MALLOC_CAP_8BIT);
+    str.printf("8-bit capable: free=%lu allocated=%lu largest_block=%lu\n",
+               (unsigned long)heap_info.total_free_bytes,
+               (unsigned long)heap_info.total_allocated_bytes,
+               (unsigned long)heap_info.largest_free_block);
+
+    // 32-bit aligned memory
+    heap_caps_get_info(&heap_info, MALLOC_CAP_32BIT);
+    str.printf("32-bit capable: free=%lu allocated=%lu largest_block=%lu\n",
+               (unsigned long)heap_info.total_free_bytes,
+               (unsigned long)heap_info.total_allocated_bytes,
+               (unsigned long)heap_info.largest_free_block);
+
+    // DMA-capable memory
+    heap_caps_get_info(&heap_info, MALLOC_CAP_DMA);
+    str.printf("DMA capable: free=%lu allocated=%lu largest_block=%lu\n",
+               (unsigned long)heap_info.total_free_bytes,
+               (unsigned long)heap_info.total_allocated_bytes,
+               (unsigned long)heap_info.largest_free_block);
+
+    // SPIRAM (external RAM)
+#if CONFIG_ESP32_SPIRAM_SUPPORT || CONFIG_ESP32S3_SPIRAM_SUPPORT
+    heap_caps_get_info(&heap_info, MALLOC_CAP_SPIRAM);
+    str.printf("SPIRAM: free=%lu allocated=%lu largest_block=%lu\n",
+               (unsigned long)heap_info.total_free_bytes,
+               (unsigned long)heap_info.total_allocated_bytes,
+               (unsigned long)heap_info.largest_free_block);
+#endif
+}
+
+/*
+  Display timer frequency information
+ */
+void Util::timer_info(ExpandingString &str)
+{
+    str.printf("Timer Info:\n");
+    str.printf("CPU Frequency: %lu MHz\n", (unsigned long)(esp_clk_cpu_freq() / 1000000));
+    str.printf("APB Frequency: %lu MHz\n", (unsigned long)(rtc_clk_apb_freq_get() / 1000000));
+    str.printf("RTC Slow Clock: %lu Hz\n", (unsigned long)rtc_clk_slow_freq_get_hz());
+    str.printf("RTC Fast Clock: %lu Hz\n", (unsigned long)rtc_clk_fast_freq_get());
+}
+
+/*
+  Generate random values using ESP32 hardware RNG
+ */
+bool Util::get_random_vals(uint8_t* data, size_t size)
+{
+    if (data == nullptr || size == 0) {
+        return false;
+    }
+
+    // ESP32 hardware RNG
+    esp_fill_random(data, size);
+    return true;
+}
+
+/*
+  Generate true random values with timeout
+  ESP32's RNG is hardware-based and doesn't need blocking
+ */
+bool Util::get_true_random_vals(uint8_t* data, size_t size, uint32_t timeout_us)
+{
+    if (data == nullptr || size == 0) {
+        return false;
+    }
+
+    // ESP32's hardware RNG is fast enough, no need for timeout handling
+    esp_fill_random(data, size);
+    return true;
+}
+
+#if HAL_UART_STATS_ENABLED
+/*
+  Display UART statistics
+ */
+void Util::uart_info(ExpandingString &str)
+{
+    str.printf("UART Statistics:\n");
+
+    // Iterate through all UART ports
+    extern ESP32::UARTDesc uart_desc[];
+
+    for (uint8_t i = 0; i < hal.num_serial; i++) {
+        UARTDriver *uart = (UARTDriver *)hal.serial(i);
+        if (uart != nullptr && uart->is_initialized()) {
+            UARTDriver::StatsTracker stats;
+            uint32_t dt_ms = 1000; // 1 second interval for rate calculation
+            uart->uart_info(str, stats, dt_ms);
+        }
+    }
+}
+
+#if HAL_LOGGING_ENABLED
+/*
+  Log UART statistics to dataflash
+ */
+void Util::uart_log()
+{
+    // This would integrate with AP_Logger
+    // For now, it's a placeholder for future implementation
+    // Actual logging would require access to AP_Logger instance
+}
+#endif // HAL_LOGGING_ENABLED
+#endif // HAL_UART_STATS_ENABLED
+
+/*
+  Get system load (CPU utilization)
+ */
+bool Util::get_system_load(float& avg_load, float& peak_load) const
+{
+    // FreeRTOS doesn't directly provide CPU load
+    // We can calculate it from idle task runtime
+
+    TaskStatus_t *task_status_array;
+    UBaseType_t task_count = uxTaskGetNumberOfTasks();
+
+    task_status_array = (TaskStatus_t *)malloc(task_count * sizeof(TaskStatus_t));
+    if (task_status_array == nullptr) {
+        return false;
+    }
+
+    uint32_t total_runtime;
+    task_count = uxTaskGetSystemState(task_status_array, task_count, &total_runtime);
+
+    // Find IDLE tasks runtime
+    uint32_t idle_runtime = 0;
+    for (UBaseType_t i = 0; i < task_count; i++) {
+        if (strncmp(task_status_array[i].pcTaskName, "IDLE", 4) == 0) {
+            idle_runtime += task_status_array[i].ulRunTimeCounter;
+        }
+    }
+
+    free(task_status_array);
+
+    if (total_runtime == 0) {
+        return false;
+    }
+
+    // Calculate CPU load (100% - idle%)
+    float idle_percent = (idle_runtime * 100.0f) / total_runtime;
+    float cpu_load = 100.0f - idle_percent;
+
+    // For now, set both avg and peak to current load
+    // A proper implementation would track these over time
+    avg_load = cpu_load;
+    peak_load = cpu_load;
+
+    return true;
 }
 
 

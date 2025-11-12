@@ -46,6 +46,15 @@ public:
     uint32_t bus_clock;
     _i2c_bus_t sw_handle;
     bool soft;
+    gpio_num_t sda_pin;
+    gpio_num_t scl_pin;
+
+#if HAL_I2C_CLEAR_ON_TIMEOUT
+    // Bus recovery methods (safe GPIO-only approach)
+    void clear_bus(void);
+    uint8_t read_sda(void);
+    static void clear_all(void);
+#endif
 };
 
 class I2CDevice : public AP_HAL::I2CDevice
@@ -82,10 +91,7 @@ public:
                   uint8_t *recv, uint32_t recv_len) override;
 
     bool read_registers_multiple(uint8_t first_reg, uint8_t *recv,
-                                 uint32_t recv_len, uint8_t times) override
-    {
-        return false;
-    };
+                                 uint32_t recv_len, uint8_t times) override;
 
     /* See AP_HAL::Device::register_periodic_callback() */
     AP_HAL::Device::PeriodicHandle register_periodic_callback(

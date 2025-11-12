@@ -27,6 +27,11 @@ using namespace ESP32;
 
 Semaphore::Semaphore()
 {
+    // FreeRTOS recursive mutex creation
+    // PRIORITY INHERITANCE: FreeRTOS recursive mutexes automatically support
+    // priority inheritance to prevent priority inversion issues.
+    // This is enabled by default when configUSE_MUTEXES is set in sdkconfig.
+    // Verify sdkconfig has: CONFIG_FREERTOS_USE_MUTEXES=y
     handle = xSemaphoreCreateRecursiveMutex();
 }
 
@@ -61,12 +66,11 @@ void Semaphore::take_blocking()
 
 bool Semaphore::take_nonblocking()
 {
-    bool ok = xSemaphoreTakeRecursive((QueueHandle_t)handle, 0) == pdTRUE;
-    if (ok) {
-        give();
-    }
-
-    return ok;
+    // CRITICAL FIX: Do NOT release the semaphore after taking it!
+    // take_nonblocking() should acquire and HOLD the lock, not test-and-release.
+    // The caller is responsible for calling give() when done.
+    // FreeRTOS recursive mutex supports priority inheritance by default.
+    return xSemaphoreTakeRecursive((QueueHandle_t)handle, 0) == pdTRUE;
 }
 
 bool Semaphore::check_owner()

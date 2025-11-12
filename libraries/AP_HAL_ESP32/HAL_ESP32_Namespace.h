@@ -20,4 +20,6 @@ class GPIO;
 class DigitalSource;
 class Storage;
 class RmtSigReader;
+class CANIface;   // CAN interface driver
+class Flash;
 }  // namespace ESP32

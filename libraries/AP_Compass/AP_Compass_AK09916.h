@@ -206,4 +206,29 @@ private:
     bool _started;
 };
 
+class AP_AK09916_BusDriver_Direct_I2C : public AP_AK09916_BusDriver
+{
+public:
+    explicit AP_AK09916_BusDriver_Direct_I2C(AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev);
+
+    bool block_read(uint8_t reg, uint8_t *buf, uint32_t size) override;
+    bool register_read(uint8_t reg, uint8_t *val) override;
+    bool register_write(uint8_t reg, uint8_t val, bool checked = false) override;
+
+    AP_HAL::Device::PeriodicHandle register_periodic_callback(uint32_t period_usec,
+                                                              AP_HAL::Device::PeriodicCb cb) override;
+
+    AP_HAL::Semaphore *get_semaphore() override;
+
+    void set_device_type(uint8_t devtype) override;
+    uint32_t get_bus_id(void) const override;
+
+    void setup_checked_registers(uint8_t num_regs) override;
+    void check_next_register(void) override;
+
+private:
+    AP_HAL::OwnPtr<AP_HAL::I2CDevice> _dev;
+    AP_HAL::Device::PeriodicHandle _periodic{};
+};
+
 #endif  // AP_COMPASS_AK09916_ENABLED

@@ -1,0 +1,57 @@
+# ========================================================================
+# Hardware Pin Mapping (Insert after Serial Port Configuration section)
+# ========================================================================
+
+# ESP32-S3 UART GPIO Pin Mapping
+ESP32_SERIAL  UART_NUM_0  GPIO_NUM_44  GPIO_NUM_43  # Console/MAVLink (USB)
+ESP32_SERIAL  UART_NUM_1  GPIO_NUM_17  GPIO_NUM_18  # GPS (SERIAL3)
+ESP32_SERIAL  UART_NUM_2  GPIO_NUM_16  GPIO_NUM_15  # DST800 (SERIAL2)
+
+# I2C Bus for ICM20948 IMU (SDA=GPIO20, SCL=GPIO21)
+#             Port       SDA         SCL          SPEED    INTERNAL SOFT
+ESP32_I2CBUS  I2C_NUM_0  GPIO_NUM_20 GPIO_NUM_21  400*KHZ  true     false
+
+# SPI bus (virtual - required for SPIDeviceManager)
+#            Host      DMA Channel     MOSI         MISO         SCLK
+ESP32_SPIBUS SPI3_HOST SPI_DMA_CH_AUTO GPIO_NUM_NC  GPIO_NUM_NC  GPIO_NUM_NC
+
+# Dummy SPI device (virtual - required for compilation only)
+ESP32_SPIDEV  dummy   0     0       GPIO_NUM_NC  0    1*MHZ   1*MHZ
+
+# ========================================================================
+# IMU Configuration - ICM20948 (Replace the existing IMU section)
+# ========================================================================
+
+# ICM20948 on I2C bus 0 @ address 0x68
+define HAL_INS_DEFAULT HAL_INS_ICM20XXX_I2C
+define HAL_INS_ICM20XXX_I2C_BUS 0
+define HAL_INS_ICM20XXX_I2C_ADDR (0x68)
+define INS_MAX_INSTANCES 3
+
+# ICM20948 IMU declaration
+IMU Invensensev2 I2C:0:0x68 ROTATION_NONE
+
+# ========================================================================
+# Compass Configuration - AK09916 (inside ICM20948)
+# ========================================================================
+
+# AK09916 magnetometer inside ICM20948
+define HAL_COMPASS_ICM20948_I2C_ADDR (0x68)
+define HAL_COMPASS_AK09916_I2C_BUS 0
+define HAL_COMPASS_AK09916_I2C_ADDR (0x0C)
+define HAL_COMPASS_MAX_SENSORS 3
+define AP_COMPASS_ICM20948_ENABLED 1
+define HAL_PROBE_EXTERNAL_I2C_COMPASSES 1
+
+# Compass declaration
+COMPASS AK09916:probe_ICM20948_I2C 0 ROTATION_NONE
+
+# ========================================================================
+# Barometer Configuration
+# ========================================================================
+
+# Allow boot without barometer (water surface vehicle)
+define HAL_BARO_ALLOW_INIT_NO_BARO 1
+# If you have a barometer, configure it here
+# define HAL_BARO_DEFAULT HAL_BARO_BMP280_I2C
+

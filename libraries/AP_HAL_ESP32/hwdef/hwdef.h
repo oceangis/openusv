@@ -12,7 +12,7 @@
 #define FALSE 0
 #endif
 
-#define HAL_ESP32_BOARD_NAME "esp32s3_icm20948"
+#define HAL_ESP32_BOARD_NAME "esp32s3-rover-dronecan"
 #define HAL_INS_DEFAULT HAL_INS_ICM20XXX_I2C
 #define HAL_INS_ICM20XXX_I2C_BUS 0
 #define HAL_INS_ICM20XXX_I2C_ADDR (0x68)
@@ -24,20 +24,54 @@
 #define AP_COMPASS_ICM20948_ENABLED 1
 #define HAL_PROBE_EXTERNAL_I2C_COMPASSES 1
 #define HAL_BARO_ALLOW_INIT_NO_BARO 1
-#define HAL_ESP32_WIFI 1
-#define WIFI_SSID "ardupilot123"
-#define WIFI_PWD "ardupilot123"
-#define HAL_ESP32_RMT_RX_PIN_NUMBER GPIO_NUM_14
+#define DEFAULT_SERIAL0_PROTOCOL SerialProtocol_MAVLink2
+#define DEFAULT_SERIAL0_BAUD 115200
+#define DEFAULT_SERIAL3_PROTOCOL SerialProtocol_GPS
+#define DEFAULT_SERIAL3_BAUD 38400
+#define DEFAULT_SERIAL2_PROTOCOL SerialProtocol_None
+#define DEFAULT_SERIAL2_BAUD 4800
+#define DEFAULT_SERIAL4_PROTOCOL SerialProtocol_None
+#define DEFAULT_SERIAL4_BAUD 9600
+#define DEFAULT_SERIAL5_PROTOCOL SerialProtocol_None
+#define DEFAULT_SERIAL5_BAUD 115200
+#define GPS_TYPE 1
+#define GPS_TYPE2 0
+#define AP_GPS_UBLOX_ENABLED 1
+#define GPS_MAX_RECEIVERS 2
+#define GPS_MAX_INSTANCES 2
+#define HAL_NUM_CAN_IFACES 1
+#define HAL_ENABLE_DRONECAN_DRIVERS 1
+#define AP_DRONECAN_ENABLED 1
+#define HAL_CANMANAGER_ENABLED 1
+#define HAL_DRONECAN_DNA_ENABLED 1
+#define HAL_DRONECAN_SEND_GPS 1
+#define HAL_DRONECAN_SEND_COMPASS 1
+#define HAL_CAN_RX_QUEUE_SIZE 128
+#define HAL_CAN_TX_QUEUE_SIZE 32
+#define HAL_ESP32_RMT_RX_PIN_NUMBER GPIO_NUM_NC
+#define HAL_SCHEDULER_LOOP_RATE 400
+#define HAL_SCHEDULER_MAX_THREADS 8
+#define HAL_THREAD_STACK_SIZE 16384
+#define HAL_WITH_PSRAM 1
+#define HAL_PSRAM_HEAP_SIZE (6 * 1024 * 1024)
+#define AP_ROVER_ENABLED 1
+#define MODE_GUIDED_ENABLED 1
+#define MODE_AUTO_ENABLED 1
+#define MODE_RTL_ENABLED 1
+#define HAL_LOGGING_ENABLED 1
+#define HAL_OS_POSIX_IO 1
+#define HAL_CONSOLE_ENABLED 1
 #define HAVE_FILESYSTEM_SUPPORT 0
 #define HAL_ESP32_SDMMC 0
 #define HAL_ESP32_SDCARD 0
 #define LOGGER_MAVLINK_SUPPORT 1
-#define HAL_OS_POSIX_IO 1
 #define HAL_LOGGING_BACKENDS_DEFAULT 1
+#define HAL_ESP32_GPIO_WEATHER_PWR GPIO_NUM_12
+#define HAL_ESP32_ENABLE_LIGHT_SLEEP 0
 
 // SPI buses table
 #define HAL_ESP32_SPI_BUSES \
-   { .host=SPI3_HOST, .dma_ch=SPI_DMA_CH_AUTO, .mosi=GPIO_NUM_36, .miso=GPIO_NUM_37, .sclk=GPIO_NUM_35 },
+   { .host=SPI3_HOST, .dma_ch=SPI_DMA_CH_AUTO, .mosi=GPIO_NUM_NC, .miso=GPIO_NUM_NC, .sclk=GPIO_NUM_NC },
 
 // SPI devices table
 #define HAL_ESP32_SPI_DEVICES \
@@ -45,7 +79,7 @@
 
 // i2c buses table
 #define HAL_ESP32_I2C_BUSES \
-   { .port=I2C_NUM_0, .sda=GPIO_NUM_20, .scl=GPIO_NUM_21, .speed=400*KHZ, .internal=true, .soft=false }
+   { .port=I2C_NUM_0, .sda=GPIO_NUM_8, .scl=GPIO_NUM_9, .speed=400*KHZ, .internal=true, .soft=false }
 #define HAL_INS_PROBE1  ADD_BACKEND(AP_InertialSensor_Invensensev2::probe(*this,GET_I2C_DEVICE(0,0x68),ROTATION_NONE))
 #ifndef INS_MAX_INSTANCES
 #define INS_MAX_INSTANCES 1
@@ -61,14 +95,8 @@
 // serial devices table
 #define HAL_ESP32_UART_DEVICES \
    { .port=UART_NUM_0, .rx=GPIO_NUM_44, .tx=GPIO_NUM_43 },\
-   { .port=UART_NUM_1, .rx=GPIO_NUM_17, .tx=GPIO_NUM_18 }
-#define HAL_ESP32_RCOUT { GPIO_NUM_11, GPIO_NUM_10, GPIO_NUM_9, GPIO_NUM_8, GPIO_NUM_7, GPIO_NUM_6 }
-
-// ADC pins table
-#define HAL_ESP32_ADC_PINS \
-   { .channel=ADC_CHANNEL_4, .scaling=11, .ardupin=1 },\
-   { .channel=ADC_CHANNEL_3, .scaling=11, .ardupin=2 },\
-   { .channel=ADC_CHANNEL_1, .scaling=11, .ardupin=3 },\
-   { .channel=ADC_CHANNEL_0, .scaling=11, .ardupin=4 }
+   { .port=UART_NUM_1, .rx=GPIO_NUM_17, .tx=GPIO_NUM_18 },\
+   { .port=UART_NUM_2, .rx=GPIO_NUM_16, .tx=GPIO_NUM_15 }
+#define HAL_ESP32_RCOUT { GPIO_NUM_11, GPIO_NUM_10, GPIO_NUM_7, GPIO_NUM_6 }
 
 // No SDSPI configuration

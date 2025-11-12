@@ -197,6 +197,44 @@ AP_Compass_Backend *AP_Compass_AK09916::probe_ICM20948_I2C(uint8_t inv2_instance
 {
     AP_InertialSensor &ins = AP::ins();
 
+    // First attempt: Try direct I2C access (bypass mode)
+    // This is needed when ICM20948 is on I2C bus with bypass enabled
+    for (uint8_t bus_num = 0; bus_num < 2; bus_num++) {
+        auto dev = hal.i2c_mgr->get_device(bus_num, HAL_COMPASS_AK09916_I2C_ADDR);
+        if (!dev) {
+            continue;
+        }
+
+        // Try to communicate with the device
+        dev->get_semaphore()->take_blocking();
+        uint8_t whoami = 0;
+        bool ok = dev->read_registers(0x01, &whoami, 1);  // Company ID register
+        dev->get_semaphore()->give();
+
+        if (ok && whoami == 0x48) {  // AK09916 company ID
+            // Found the magnetometer via bypass mode!
+            DEV_PRINTF("AK09916: Found via I2C bypass on bus %u\n", bus_num);
+
+            AP_AK09916_BusDriver *bus =
+                NEW_NOTHROW AP_AK09916_BusDriver_Direct_I2C(std::move(dev));
+            if (!bus) {
+                return nullptr;
+            }
+
+            AP_Compass_AK09916 *sensor =
+                NEW_NOTHROW AP_Compass_AK09916(bus, false, rotation);
+            if (!sensor || !sensor->init()) {
+                delete sensor;
+                return nullptr;
+            }
+
+            return sensor;
+        }
+    }
+
+    // Second attempt: Fall back to auxiliary bus method (for SPI-connected ICM20948)
+    DEV_PRINTF("AK09916: Trying auxiliary bus mode\n");
+
     AP_AK09916_BusDriver *bus =
         NEW_NOTHROW AP_AK09916_BusDriver_Auxiliary(ins, HAL_INS_INV2_I2C, inv2_instance, HAL_COMPASS_AK09916_I2C_ADDR);
     if (!bus) {
@@ -489,6 +527,82 @@ void AP_AK09916_BusDriver_Auxiliary::set_device_type(uint8_t devtype)
 uint32_t AP_AK09916_BusDriver_Auxiliary::get_bus_id(void) const
 {
     return _bus->get_bus_id();
+}
+
+AP_AK09916_BusDriver_Direct_I2C::AP_AK09916_BusDriver_Direct_I2C(AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev)
+    : _dev(std::move(dev))
+{
+    if (_dev) {
+        _dev->set_speed(AP_HAL::Device::SPEED_HIGH);
+    }
+}
+
+bool AP_AK09916_BusDriver_Direct_I2C::block_read(uint8_t reg, uint8_t *buf, uint32_t size)
+{
+    if (!_dev) {
+        return false;
+    }
+    return _dev->read_registers(reg, buf, size);
+}
+
+bool AP_AK09916_BusDriver_Direct_I2C::register_read(uint8_t reg, uint8_t *val)
+{
+    if (!_dev) {
+        return false;
+    }
+    return _dev->read_registers(reg, val, 1);
+}
+
+bool AP_AK09916_BusDriver_Direct_I2C::register_write(uint8_t reg, uint8_t val, bool checked)
+{
+    if (!_dev) {
+        return false;
+    }
+    return _dev->write_register(reg, val, checked);
+}
+
+AP_HAL::Device::PeriodicHandle AP_AK09916_BusDriver_Direct_I2C::register_periodic_callback(uint32_t period_usec,
+                                                                                           AP_HAL::Device::PeriodicCb cb)
+{
+    if (!_dev) {
+        return nullptr;
+    }
+    _periodic = _dev->register_periodic_callback(period_usec, cb);
+    return _periodic;
+}
+
+AP_HAL::Semaphore *AP_AK09916_BusDriver_Direct_I2C::get_semaphore()
+{
+    if (!_dev) {
+        return nullptr;
+    }
+    return _dev->get_semaphore();
+}
+
+void AP_AK09916_BusDriver_Direct_I2C::set_device_type(uint8_t devtype)
+{
+    if (_dev) {
+        _dev->set_device_type(devtype);
+    }
+}
+
+uint32_t AP_AK09916_BusDriver_Direct_I2C::get_bus_id(void) const
+{
+    return _dev ? _dev->get_bus_id() : 0U;
+}
+
+void AP_AK09916_BusDriver_Direct_I2C::setup_checked_registers(uint8_t num_regs)
+{
+    if (_dev) {
+        _dev->setup_checked_registers(num_regs);
+    }
+}
+
+void AP_AK09916_BusDriver_Direct_I2C::check_next_register(void)
+{
+    if (_dev) {
+        _dev->check_next_register();
+    }
 }
 
 #endif  // AP_COMPASS_AK09916_ENABLED

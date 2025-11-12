@@ -2,8 +2,57 @@
 # 自动生成 - 请勿手动编辑
 
 idf_component_register(
-    SRCS "AnalogIn.cpp" "DeviceBus.cpp" "GPIO.cpp" "HAL_ESP32_Class.cpp" "I2CDevice.cpp" "OSD.cpp" "Profile.cpp" "RCInput.cpp" "RCOutput.cpp" "RmtSigReader.cpp"  # 仅列出前10个，实际编译时会包含所有
-    INCLUDE_DIRS "." "boards" "hwdef" "hwdef/esp32buzz" "hwdef/esp32diy"  # 主要包含目录
+    SRCS
+        "AnalogIn.cpp"
+        "CANIface.cpp"
+        "DeviceBus.cpp"
+        "Flash.cpp"
+        "GPIO.cpp"
+        "HAL_ESP32_Class.cpp"
+        "I2CDevice.cpp"
+        "OSD.cpp"
+        "Profile.cpp"
+        "RCInput.cpp"
+        "RCOutput.cpp"
+        "RmtSigReader.cpp"
+        "Scheduler.cpp"
+        "SdCard.cpp"
+        "Semaphores.cpp"
+        "SoftSigReaderInt.cpp"
+        "SoftSigReaderRMT.cpp"
+        "SPIDevice.cpp"
+        "Storage.cpp"
+        "system.cpp"
+        "UARTDriver.cpp"
+        "Util.cpp"
+        "WiFiDriver.cpp"
+        "WiFiUdpDriver.cpp"
+        "i2c_sw.c"
+    INCLUDE_DIRS
+        "."
+        "boards"
+        "hwdef"
+        "hwdef/esp32buzz"
+        "hwdef/esp32diy"
+        "hwdef/esp32empty"
+        "hwdef/esp32icarus"
+        "hwdef/esp32imu_module_v11"
+        "hwdef/esp32nick"
+        "hwdef/esp32s3devkit"
+        "hwdef/esp32s3empty"
+        "hwdef/esp32s3m5stampfly"
+        "hwdef/esp32s3_icm20948"
+        "hwdef/esp32s3rover"
+        "hwdef/esp32tomte76"
+        "hwdef/scripts"
+        "profile"
+        "targets"
+        "targets/esp32"
+        "targets/esp32/esp-idf"
+        "targets/esp32s3"
+        "targets/esp32s3/esp-idf"
+        "utils"
+        "utils/profile"
     REQUIRES freertos esp_timer driver
 )
 
@@ -11,6 +60,7 @@ idf_component_register(
 set(COMPONENT_SRCS
     "AnalogIn.cpp"
     "DeviceBus.cpp"
+    "Flash.cpp"
     "GPIO.cpp"
     "HAL_ESP32_Class.cpp"
     "I2CDevice.cpp"

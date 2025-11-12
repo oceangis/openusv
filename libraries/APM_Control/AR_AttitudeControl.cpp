@@ -62,6 +62,13 @@
 // speed (in m/s) at or below which vehicle is considered stopped (_STOP_SPEED parameter default)
 #define AR_ATTCONTROL_STOP_SPEED_DEFAULT    0.1f
 
+// lateral speed control defaults (for vectored boats)
+#define AR_ATTCONTROL_LAT_SPEED_P       0.30f
+#define AR_ATTCONTROL_LAT_SPEED_I       0.15f
+#define AR_ATTCONTROL_LAT_SPEED_IMAX    1.00f
+#define AR_ATTCONTROL_LAT_SPEED_D       0.00f
+#define AR_ATTCONTROL_LAT_SPEED_FILT    10.00f
+
 extern const AP_HAL::HAL& hal;
 
 AR_AttitudeControl *AR_AttitudeControl::_singleton;
@@ -574,6 +581,51 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("_STR_DEC_MAX", 16, AR_AttitudeControl, _steer_decel_max, AR_ATTCONTROL_STEER_DECEL_MAX),
 
+    // @Param: _LAT_SPD_P
+    // @DisplayName: Lateral speed control P gain
+    // @Description: Lateral speed control P gain for vectored boats. Converts lateral speed error (in m/s) to lateral output (range -1 to +1)
+    // @Range: 0.010 2.000
+    // @Increment: 0.01
+    // @User: Standard
+
+    // @Param: _LAT_SPD_I
+    // @DisplayName: Lateral speed control I gain
+    // @Description: Lateral speed control I gain for vectored boats. Corrects long term error between desired and actual lateral speed
+    // @Range: 0.000 2.000
+    // @Increment: 0.01
+    // @User: Standard
+
+    // @Param: _LAT_SPD_IMAX
+    // @DisplayName: Lateral speed control I gain maximum
+    // @Description: Lateral speed control I gain maximum. Constrains lateral output (range -1 to +1) that the I term will generate
+    // @Range: 0.000 1.000
+    // @Increment: 0.01
+    // @User: Standard
+
+    // @Param: _LAT_SPD_D
+    // @DisplayName: Lateral speed control D gain
+    // @Description: Lateral speed control D gain for vectored boats. Compensates for short-term change in desired lateral speed vs actual
+    // @Range: 0.000 0.400
+    // @Increment: 0.001
+    // @User: Standard
+
+    // @Param: _LAT_SPD_FF
+    // @DisplayName: Lateral speed control feed forward
+    // @Description: Lateral speed control feed forward for vectored boats
+    // @Range: 0.000 0.500
+    // @Increment: 0.001
+    // @User: Standard
+
+    // @Param: _LAT_SPD_FILT
+    // @DisplayName: Lateral speed control filter frequency
+    // @Description: Lateral speed control input filter. Lower values reduce noise but add delay
+    // @Range: 0.000 100.000
+    // @Increment: 0.1
+    // @Units: Hz
+    // @User: Standard
+
+    AP_SUBGROUPINFO(_lateral_speed_pid, "_LAT_SPD_", 17, AR_AttitudeControl, AC_PID),
+
     AP_GROUPEND
 };
 
@@ -582,7 +634,8 @@ AR_AttitudeControl::AR_AttitudeControl() :
     _steer_rate_pid(AR_ATTCONTROL_STEER_RATE_P, AR_ATTCONTROL_STEER_RATE_I, AR_ATTCONTROL_STEER_RATE_D, AR_ATTCONTROL_STEER_RATE_FF, AR_ATTCONTROL_STEER_RATE_IMAX, 0.0f, AR_ATTCONTROL_STEER_RATE_FILT, 0.0f),
     _throttle_speed_pid(AR_ATTCONTROL_THR_SPEED_P, AR_ATTCONTROL_THR_SPEED_I, AR_ATTCONTROL_THR_SPEED_D, 0.0f, AR_ATTCONTROL_THR_SPEED_IMAX, 0.0f, AR_ATTCONTROL_THR_SPEED_FILT, 0.0f),
     _pitch_to_throttle_pid(AR_ATTCONTROL_PITCH_THR_P, AR_ATTCONTROL_PITCH_THR_I, AR_ATTCONTROL_PITCH_THR_D, 0.0f, AR_ATTCONTROL_PITCH_THR_IMAX, 0.0f, AR_ATTCONTROL_PITCH_THR_FILT, 0.0f),
-    _sailboat_heel_pid(AR_ATTCONTROL_HEEL_SAIL_P, AR_ATTCONTROL_HEEL_SAIL_I, AR_ATTCONTROL_HEEL_SAIL_D, 0.0f, AR_ATTCONTROL_HEEL_SAIL_IMAX, 0.0f, AR_ATTCONTROL_HEEL_SAIL_FILT, 0.0f)
+    _sailboat_heel_pid(AR_ATTCONTROL_HEEL_SAIL_P, AR_ATTCONTROL_HEEL_SAIL_I, AR_ATTCONTROL_HEEL_SAIL_D, 0.0f, AR_ATTCONTROL_HEEL_SAIL_IMAX, 0.0f, AR_ATTCONTROL_HEEL_SAIL_FILT, 0.0f),
+    _lateral_speed_pid(AR_ATTCONTROL_LAT_SPEED_P, AR_ATTCONTROL_LAT_SPEED_I, AR_ATTCONTROL_LAT_SPEED_D, 0.0f, AR_ATTCONTROL_LAT_SPEED_IMAX, 0.0f, AR_ATTCONTROL_LAT_SPEED_FILT, 0.0f)
 {
     _singleton = this;
     AP_Param::setup_object_defaults(this, var_info);
@@ -1096,5 +1149,71 @@ void AR_AttitudeControl::set_notch_sample_rate(float sample_rate)
     _steer_rate_pid.set_notch_sample_rate(sample_rate);
     _throttle_speed_pid.set_notch_sample_rate(sample_rate);
     _pitch_to_throttle_pid.set_notch_sample_rate(sample_rate);
+    _lateral_speed_pid.set_notch_sample_rate(sample_rate);
 #endif
+}
+
+// get lateral speed in m/s (earth-frame horizontal velocity along vehicle y-axis)
+bool AR_AttitudeControl::get_lateral_speed(float &lateral_speed) const
+{
+    Vector3f velocity;
+    if (!AP::ahrs().get_velocity_NED(velocity)) {
+        return false;
+    }
+
+    // Convert NED velocity to body frame lateral (right is positive)
+    const float yaw_rad = AP::ahrs().get_yaw_rad();
+    lateral_speed = -velocity.x * sinf(yaw_rad) + velocity.y * cosf(yaw_rad);
+
+    return true;
+}
+
+// get latest desired lateral speed
+float AR_AttitudeControl::get_desired_lateral_speed() const
+{
+    return _desired_lateral_speed;
+}
+
+// return a lateral output from -1 to +1 given a desired lateral speed in m/s
+// positive speed is to the right
+float AR_AttitudeControl::get_lateral_out_speed(float desired_lateral_speed, bool motor_limit_left, bool motor_limit_right, float dt)
+{
+    // get current lateral speed
+    float current_lateral_speed = 0.0f;
+    get_lateral_speed(current_lateral_speed);
+
+    // update time
+    _lateral_last_ms = AP_HAL::millis();
+    _desired_lateral_speed = desired_lateral_speed;
+
+    // run PID controller
+    const float lateral_out = _lateral_speed_pid.update_all(desired_lateral_speed, current_lateral_speed, dt, (motor_limit_left || motor_limit_right));
+
+    // record limiting
+    _lateral_limit_left = motor_limit_left;
+    _lateral_limit_right = motor_limit_right;
+
+    return constrain_float(lateral_out, -1.0f, 1.0f);
+}
+
+// return both forward and lateral outputs for vectored thrust boats
+void AR_AttitudeControl::get_vectored_out_speed(float desired_forward_speed,
+                                                  float desired_lateral_speed,
+                                                  bool motor_limit,
+                                                  float cruise_speed,
+                                                  float cruise_throttle,
+                                                  float dt,
+                                                  float &forward_out,
+                                                  float &lateral_out)
+{
+    // forward speed control (use existing throttle speed controller)
+    forward_out = get_throttle_out_speed(desired_forward_speed,
+                                          motor_limit, motor_limit,
+                                          cruise_speed, cruise_throttle,
+                                          dt);
+
+    // lateral speed control (use new lateral speed controller)
+    lateral_out = get_lateral_out_speed(desired_lateral_speed,
+                                         motor_limit, motor_limit,
+                                         dt);
 }

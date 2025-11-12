@@ -463,8 +463,8 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
 
     // @Param: FRAME_TYPE
     // @DisplayName: Frame Type
-    // @Description: Frame Type
-    // @Values: 0:Default,1:Omni3,2:OmniX,3:OmniPlus,4:Omni3Mecanum
+    // @Description: Motor configuration type. 0=default (skid/ackermann), 1-4=ground omni configs, 10+=boat vectored configs
+    // @Values: 0:Default,1:Omni3,2:OmniX,3:OmniPlus,4:Omni3Mecanum,10:BoatVectoredT,11:BoatVectoredX
     // @User: Standard
     // @RebootRequired: True
     AP_GROUPINFO("FRAME_TYPE", 24, ParametersG2, frame_type, 0),

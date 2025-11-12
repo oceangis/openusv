@@ -40,6 +40,8 @@ public:
     };
     void     delay(uint16_t ms) override;
     void     delay_microseconds(uint16_t us) override;
+    void     delay_microseconds_boost(uint16_t us) override;
+    void     boost_end(void) override;
     void     register_timer_process(AP_HAL::MemberProc) override;
     void     register_io_process(AP_HAL::MemberProc) override;
     void     register_timer_failsafe(AP_HAL::Proc, uint32_t period_us) override;
@@ -48,6 +50,10 @@ public:
     // check and set the startup state
     void     set_system_initialized() override;
     bool     is_system_initialized() override;
+
+    // Expected delay management (suppress watchdog warnings)
+    void     expect_delay_ms(uint32_t ms) override;
+    bool     in_expected_delay(void) const override;
 
     void     print_stats(void) ;
     void     print_main_loop_rate(void);
@@ -59,32 +65,29 @@ public:
     static void thread_create_trampoline(void *ctx);
     bool thread_create(AP_HAL::MemberProc, const char *name, uint32_t stack_size, priority_base base, int8_t priority) override;
 
-    /*static const int SPI_PRIORITY = 40; // if your primary imu is spi, this should be above the i2c value, spi is better.
-    static const int MAIN_PRIO = 15;
-    static const int I2C_PRIORITY = 8; // if your primary imu is i2c, this should be above the spi value, i2c is not preferred.
-    static const int TIMER_PRIO = 15;
-    static const int RCIN_PRIO = 15;
-    static const int RCOUT_PRIO = 15;
-    static const int WIFI_PRIO = 10;
-    static const int UART_PRIO = 8;
-    static const int IO_PRIO = 6;
-    static const int STORAGE_PRIO = 6; */
+    // configMAX_PRIORITIES=25
+    // Priority design based on ChibiOS with tighter grouping to prevent task starvation
 
-      // configMAX_PRIORITIES=25
+    // High Priority Group (20-24): Critical real-time tasks
+    static const int MAIN_PRIO           = 22;  // Main loop
+    static const int MAIN_PRIO_BOOST     = 23;  // Main loop boosted (only +1 from normal)
+    static const int TIMER_PRIO          = 23;  // Timer thread (critical timing)
+    static const int UART_PRIO           = 22;  // UART high priority for telemetry
+    static const int SPI_PRIORITY        = 23;  // SPI for IMU (critical sensor data)
+    static const int RCOUT_PRIO          = 23;  // PWM output (critical for control)
 
+    // Medium Priority Group (15-19): Important but not critical
+    static const int WIFI_PRIO1          = 18;  // WiFi main thread
+    static const int I2C_PRIORITY        = 17;  // I2C bus operations
+    static const int RCIN_PRIO           = 16;  // RC input
+    static const int WIFI_PRIO2          = 15;  // WiFi secondary
 
-    static const int SPI_PRIORITY = 24; //      if your primary imu is spi, this should be above the i2c value, spi is better.
-    static const int MAIN_PRIO    = 24; //	cpu0: we want scheduler running at full tilt.
-    static const int I2C_PRIORITY = 5;  //      if your primary imu is i2c, this should be above the spi value, i2c is not preferred.
-    static const int TIMER_PRIO   = 23; //dont make 24. a low priority mere might cause wifi thruput to suffer
-    static const int RCIN_PRIO    = 5;
-    static const int RCOUT_PRIO   = 10;
-    static const int WIFI_PRIO1   = 20; //cpu1:
-    static const int WIFI_PRIO2   = 12; //cpu1:
-    static const int UART_PRIO    = 23; //dont make 24, scheduler suffers a bit. cpu1: a low priority mere might cause wifi thruput to suffer, as wifi gets passed its data frim the uart subsustem in _writebuf/_readbuf
-    static const int IO_PRIO      = 5;
-    static const int STORAGE_PRIO = 4;
+    // Low Priority Group (4-10): Background tasks
+    static const int MONITOR_PRIO        = 10;  // Monitor thread (watchdog, lockup detection)
+    static const int IO_PRIO             = 8;   // General I/O
+    static const int STORAGE_PRIO        = 6;   // Storage operations
 
+    static const int MONITOR_SS   = 1024*2;     // Monitor thread
     static const int TIMER_SS     = 1024*3;
     static const int MAIN_SS      = 1024*5;
     static const int RCIN_SS      = 1024*3;
@@ -114,8 +117,9 @@ private:
     tskTaskControlBlock* _rcout_task_handle;
     tskTaskControlBlock* _uart_task_handle;
     tskTaskControlBlock* _io_task_handle;
-    tskTaskControlBlock* test_task_handle;
     tskTaskControlBlock* _storage_task_handle;
+    tskTaskControlBlock* _monitor_task_handle;
+    tskTaskControlBlock* test_task_handle;
 
     static void _main_thread(void *arg);
     static void _timer_thread(void *arg);
@@ -124,6 +128,7 @@ private:
     static void _uart_thread(void *arg);
     static void _io_thread(void *arg);
     static void _storage_thread(void *arg);
+    static void _monitor_thread(void *arg);
 
     static void set_position(void* arg);
 
@@ -140,4 +145,43 @@ private:
     bool _in_io_proc;
     void _run_io();
     Semaphore _io_sem;
+
+    // Priority boost support
+    bool _priority_boosted;
+    UBaseType_t _original_priority;
+    uint64_t _boost_end_time_us;
+    bool _called_boost;  // Track if boost was called in current loop
+
+    // Expected delay support (suppress watchdog warnings)
+    uint32_t _expect_delay_start;
+    uint32_t _expect_delay_length;
+
+    // Monitor thread support
+    uint32_t last_watchdog_pat_ms;  // Last time watchdog was patted in main loop
+
+public:
+    // Check if delay_microseconds_boost() was called
+    bool check_called_boost(void);
+
+    // Stack monitoring
+    void monitor_stack_usage(void);
+    uint32_t get_stack_free(TaskHandle_t task);
+
+    // Dynamic priority management (runtime adjustment)
+    bool adjust_task_priority(TaskHandle_t task, int8_t priority_delta);
+    UBaseType_t get_task_priority(TaskHandle_t task);
+
+    // Deadlock detection
+    struct TaskState {
+        TaskHandle_t handle;
+        eTaskState state;
+        uint32_t runtime;
+        uint32_t last_check_time;
+    };
+    void check_for_deadlock(void);
+
+    // Task starvation monitoring
+    void check_task_starvation(void);
+
+private:
 };

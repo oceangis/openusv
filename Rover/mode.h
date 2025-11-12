@@ -26,6 +26,7 @@ public:
         AUTO         = 10,
         RTL          = 11,
         SMART_RTL    = 12,
+        POSHOLD      = 13,  // Position Hold mode for vectored boats (X-type)
         GUIDED       = 15,
         INITIALISING = 16,
         // Mode number 30 reserved for "offboard" for external/lua control.
@@ -663,6 +664,52 @@ protected:
     float _desired_speed;       // desired speed (ramped down from initial speed to zero)
 };
 
+// Position Hold mode - ArduSub-style control for X-type vectored boats
+// Provides independent position hold and heading hold with body-frame input
+class ModePosHold : public Mode
+{
+public:
+
+    Number mode_number() const override { return Number::POSHOLD; }
+    const char *name4() const override { return "PSHD"; }
+
+    // methods that affect movement of the vehicle in this mode
+    void update() override;
+
+    // attributes of the mode
+    bool is_autopilot_mode() const override { return false; }  // semi-manual mode
+    bool has_manual_input() const override { return true; }
+
+    // return desired heading and position for reporting
+    float wp_bearing() const override { return _heading_target_cd * 0.01f; }
+    float nav_bearing() const override { return _heading_target_cd * 0.01f; }
+
+    // return desired location
+    bool get_desired_location(Location& destination) const override WARN_IF_UNUSED;
+
+    // return distance (in meters) to destination
+    float get_distance_to_destination() const override;
+
+protected:
+
+    bool _enter() override;
+
+    // position control
+    Location _position_target;      // target position (updated by pilot input)
+    float _desired_forward_speed;   // desired forward speed (m/s)
+    float _desired_lateral_speed;   // desired lateral speed (m/s)
+
+    // heading control (ArduSub-style 250ms smooth decel + hold)
+    float _heading_target_cd;           // target heading (centidegrees)
+    uint32_t _last_pilot_yaw_input_ms;  // last time yaw input was received
+
+private:
+
+    // helper methods
+    void control_position();    // position/velocity control
+    void control_heading();     // heading hold control (ArduSub-style)
+};
+
 class ModeManual : public Mode
 {
 public:
@@ -684,6 +731,16 @@ public:
 protected:
 
     void _exit() override;
+
+private:
+
+    // Heading assist for X-type vectored boats (optional, parameter-controlled)
+    // Provides ArduSub-style heading hold while in manual mode
+    float _heading_target_cd = 0.0f;           // target heading (centidegrees)
+    uint32_t _last_pilot_yaw_input_ms = 0;     // last time yaw input was received
+
+    // helper method for heading assist
+    void update_heading_assist();
 };
 
 

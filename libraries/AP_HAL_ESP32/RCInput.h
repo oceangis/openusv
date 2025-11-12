@@ -46,6 +46,11 @@ public:
         return _rx_link_quality;
     }
 
+    /* Return string describing RC input protocol */
+    const char *protocol() const override {
+        return _protocol;
+    }
+
     void _timer_tick(void);
 
 private:
@@ -58,6 +63,7 @@ private:
     int16_t _rx_link_quality = -1;
     uint32_t _rcin_timestamp_last_signal;
     bool _init;
+    const char *_protocol = "RMT";
 
     bool pulse_input_enabled;
 
