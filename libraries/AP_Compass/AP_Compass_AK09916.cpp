@@ -200,18 +200,43 @@ AP_Compass_Backend *AP_Compass_AK09916::probe_ICM20948_I2C(uint8_t inv2_instance
     // First attempt: Try direct I2C access (bypass mode)
     // This is needed when ICM20948 is on I2C bus with bypass enabled
     for (uint8_t bus_num = 0; bus_num < 2; bus_num++) {
+        auto dev_icm = hal.i2c_mgr->get_device(bus_num, HAL_COMPASS_ICM20948_I2C_ADDR2);
         auto dev = hal.i2c_mgr->get_device(bus_num, HAL_COMPASS_AK09916_I2C_ADDR);
-        if (!dev) {
+        if (!dev || !dev_icm) {
             continue;
         }
 
-        // Try to communicate with the device
+        // Try to configure ICM20948 I2C bypass mode
+        dev_icm->get_semaphore()->take_blocking();
+
+        // Select bank 0 for ICM20948
+        dev_icm->write_register(0x7F, 0x00);
+        hal.scheduler->delay(1);
+
+        // Read WHO_AM_I to verify ICM20948
+        uint8_t whoami_icm = 0;
+        if (!dev_icm->read_registers(0x00, &whoami_icm, 1) || whoami_icm != 0xEA) {
+            dev_icm->get_semaphore()->give();
+            continue;
+        }
+
+        // Ensure ICM20948 is not in sleep mode
+        dev_icm->write_register(0x06, 0x01);  // PWR_MGMT_1: disable sleep, enable temp sensor
+        hal.scheduler->delay(10);
+
+        // Enable I2C bypass mode (INT_PIN_CFG register, bit 1)
+        dev_icm->write_register(0x0F, 0x02);
+        hal.scheduler->delay(10);
+
+        dev_icm->get_semaphore()->give();
+
+        // Now try to communicate with AK09916
         dev->get_semaphore()->take_blocking();
         uint8_t whoami = 0;
-        bool ok = dev->read_registers(0x01, &whoami, 1);  // Company ID register
+        bool ok = dev->read_registers(0x01, &whoami, 1);  // Device ID register
         dev->get_semaphore()->give();
 
-        if (ok && whoami == 0x48) {  // AK09916 company ID
+        if (ok && whoami == 0x09) {  // AK09916 device ID (not company ID)
             // Found the magnetometer via bypass mode!
             DEV_PRINTF("AK09916: Found via I2C bypass on bus %u\n", bus_num);
 

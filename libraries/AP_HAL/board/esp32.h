@@ -86,8 +86,8 @@ typedef ESP32::CANIface HAL_CANIface;
 #define HAL_NUM_CAN_IFACES 1
 #define HAL_MEM_CLASS HAL_MEM_CLASS_192
 
-// disable uncommon stuff that we'd otherwise get 
-#define AP_EXTERNAL_AHRS_ENABLED 0
+// disable uncommon stuff that we'd otherwise get
+#define AP_EXTERNAL_AHRS_ENABLED 1  // Enabled for BNO08x integration
 #define HAL_GENERATOR_ENABLED 0
 #define AP_DDS_ENABLED 0
 

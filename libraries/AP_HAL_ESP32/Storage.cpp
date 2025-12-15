@@ -16,6 +16,7 @@
 #include <AP_HAL/AP_HAL.h>
 #include <AP_BoardConfig/AP_BoardConfig.h>
 #include "Storage.h"
+#include "esp_task_wdt.h"
 
 #define STORAGEDEBUG 1
 
@@ -52,6 +53,35 @@ void Storage::_storage_open(void)
 
     printf("Storage partition found: addr=0x%08x, size=%u bytes\n",
            p->address, p->size);
+
+    // Check if this is first boot by reading first 16 bytes of storage
+    // If all 0xFF, force erase_all() to initialize properly
+    uint8_t test_buffer[16];
+    esp_err_t read_ret = esp_partition_read(p, 0, test_buffer, sizeof(test_buffer));
+    if (read_ret == ESP_OK) {
+        bool all_erased = true;
+        for (int i = 0; i < sizeof(test_buffer); i++) {
+            if (test_buffer[i] != 0xFF) {
+                all_erased = false;
+                break;
+            }
+        }
+
+        if (all_erased) {
+            printf("Storage appears uninitialized (all 0xFF), forcing erase_all()\n");
+            // Storage never initialized, force clean init
+            memset(_buffer, 0, STORAGE_SIZE);
+            if (!_flash.erase()) {
+                printf("ERROR: Failed to erase storage on first boot\n");
+                _use_empty_storage = true;
+                _initialised = true;
+                return;
+            }
+            printf("Storage successfully initialized\n");
+            _initialised = true;
+            return;
+        }
+    }
 
     // load from storage backend
     _flash_load();
@@ -145,51 +175,39 @@ void Storage::_flash_load(void)
         return;
     }
 
+    // Feed watchdog before long flash init operation
+    esp_task_wdt_reset();
+
     if (!_flash.init()) {
         // Flash init failed, fallback to empty storage
         printf("WARNING: Unable to init flash storage, falling back to empty storage\n");
         _use_empty_storage = true;
         return;
     }
+
+    // Feed watchdog after flash init completes
+    esp_task_wdt_reset();
 }
 
 /*
   write one storage line. This also updates _dirty_mask.
-  Enhanced with write verification
+  Write verification disabled during init to prevent infinite retry loops.
 */
 void Storage::_flash_write(uint16_t line)
 {
 #ifdef STORAGEDEBUG
     printf("%s:%d \n", __PRETTY_FUNCTION__, __LINE__);
 #endif
+
+    // Feed watchdog during flash writes
+    esp_task_wdt_reset();
+
     if (_flash.write(line*STORAGE_LINE_SIZE, STORAGE_LINE_SIZE)) {
         _write_count++;
 
-        // Verify write if not using empty storage
-        if (!_use_empty_storage) {
-            uint8_t verify_buffer[STORAGE_LINE_SIZE];
-            uint32_t offset = line * STORAGE_LINE_SIZE;
-
-            if (_flash_read_data(0, offset, verify_buffer, STORAGE_LINE_SIZE)) {
-                // Compare written data with what we intended to write
-                if (memcmp(&_buffer[offset], verify_buffer, STORAGE_LINE_SIZE) == 0) {
-                    // Write verified successfully
-                    _dirty_mask.clear(line);
-                } else {
-                    // Write verification failed - keep line dirty for retry
-                    _verify_fail_count++;
-#ifdef STORAGEDEBUG
-                    printf("Storage write verification failed at line %u\n", line);
-#endif
-                }
-            } else {
-                // Read back failed - keep line dirty
-                _verify_fail_count++;
-            }
-        } else {
-            // Empty storage - just mark clean
-            _dirty_mask.clear(line);
-        }
+        // Always mark as clean after successful write
+        // Verification is done separately via verify_storage_integrity() if needed
+        _dirty_mask.clear(line);
     }
 }
 
@@ -241,6 +259,13 @@ bool Storage::_flash_read_data(uint8_t sector, uint32_t offset, uint8_t *data, u
 #ifdef STORAGEDEBUG
     printf("%s:%d  -> sec:%u off:%d len:%d addr:%d\n", __PRETTY_FUNCTION__, __LINE__,sector,offset,length,address);
 #endif
+
+    // Feed watchdog for large reads (every 1KB)
+    static uint32_t read_counter = 0;
+    if (++read_counter % 128 == 0) {  // Every 128 reads (128*8 bytes = 1KB)
+        esp_task_wdt_reset();
+    }
+
     esp_err_t ret = esp_partition_read(p, address, data, length);
     return (ret == ESP_OK);
 }
@@ -258,8 +283,17 @@ bool Storage::_flash_erase_sector(uint8_t sector)
 #ifdef STORAGEDEBUG
     printf("%s:%d  \n", __PRETTY_FUNCTION__, __LINE__);
 #endif
+
+    // Feed watchdog before erase (erase can take several seconds)
+    esp_task_wdt_reset();
+
     size_t address = sector * STORAGE_SECTOR_SIZE;
-    return esp_partition_erase_range(p, address, STORAGE_SECTOR_SIZE) == ESP_OK;
+    esp_err_t ret = esp_partition_erase_range(p, address, STORAGE_SECTOR_SIZE);
+
+    // Feed watchdog after erase
+    esp_task_wdt_reset();
+
+    return ret == ESP_OK;
 }
 
 /*

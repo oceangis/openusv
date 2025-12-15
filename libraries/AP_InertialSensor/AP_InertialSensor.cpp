@@ -22,6 +22,253 @@
 #endif
 #include <GCS_MAVLink/GCS.h>
 
+// ============================================================================
+// I2C Scanner Tool for ICM-20948 Diagnostics
+// ============================================================================
+extern const AP_HAL::HAL& hal;
+
+/**
+ * I2C总线扫描函数
+ *
+ * 扫描指定I2C总线上的所有设备地址（0x03-0x77）
+ * 这是标准的7位I2C地址范围
+ *
+ * @param bus_num I2C总线编号（通常为0）
+ */
+void scan_i2c_bus(uint8_t bus_num)
+{
+    printf("\n");
+    printf("========================================\n");
+    printf("I2C总线扫描工具 v1.0\n");
+    printf("========================================\n");
+    printf("扫描I2C总线 %d...\n", bus_num);
+    printf("地址范围: 0x03 - 0x77 (7位地址)\n");
+    printf("========================================\n\n");
+
+    uint8_t devices_found = 0;
+    uint8_t error_count = 0;
+
+    // 扫描所有有效的7位I2C地址
+    for (uint8_t addr = 0x03; addr <= 0x77; addr++) {
+        // 创建临时I2C设备对象进行探测
+        auto dev = hal.i2c_mgr->get_device(bus_num, addr);
+
+        if (!dev) {
+            printf("错误: 无法为地址 0x%02X 创建I2C设备\n", addr);
+            error_count++;
+            continue;
+        }
+
+        // 获取I2C总线信号量
+        if (!dev->get_semaphore()->take(100)) {
+            printf("错误: 无法获取I2C总线信号量（地址0x%02X）\n", addr);
+            error_count++;
+            continue;
+        }
+
+        // 尝试写入0字节（I2C地址探测标准方法）
+        uint8_t dummy = 0;
+        bool success = dev->transfer(&dummy, 0, nullptr, 0);
+
+        dev->get_semaphore()->give();
+
+        if (success) {
+            printf("✓ 发现设备: 0x%02X (十进制: %3d)", addr, addr);
+
+            // 识别已知设备
+            if (addr == 0x68 || addr == 0x69) {
+                printf("  <-- **ICM-20948 / MPU-9250 / MPU-6500 可能地址**");
+            } else if (addr == 0x76 || addr == 0x77) {
+                printf("  <-- BMP280 / BME280 气压计");
+            } else if (addr == 0x0C || addr == 0x0D || addr == 0x0E || addr == 0x0F) {
+                printf("  <-- AK09916 / AK8963 磁力计");
+            } else if (addr == 0x1E) {
+                printf("  <-- HMC5883L / QMC5883L 磁力计");
+            } else if (addr == 0x3C || addr == 0x3D) {
+                printf("  <-- OLED显示屏");
+            } else if (addr == 0x50 || addr == 0x51) {
+                printf("  <-- EEPROM");
+            }
+            printf("\n");
+
+            devices_found++;
+        }
+
+        // 短暂延时，避免I2C总线过载
+        hal.scheduler->delay_microseconds(100);
+    }
+
+    printf("\n========================================\n");
+    printf("扫描完成！\n");
+    printf("========================================\n");
+    printf("发现设备数量: %d\n", devices_found);
+    if (error_count > 0) {
+        printf("错误次数: %d\n", error_count);
+    }
+
+    if (devices_found == 0) {
+        printf("\n*** 警告：未发现任何I2C设备！***\n");
+        printf("可能原因：\n");
+        printf("1. I2C总线配置错误（检查hwdef.dat中的SDA/SCL引脚）\n");
+        printf("2. I2C设备未正确连接或供电\n");
+        printf("3. I2C总线上拉电阻缺失（需要4.7kΩ）\n");
+        printf("4. I2C总线速度过高（尝试降低到100kHz）\n");
+    } else {
+        printf("\n发现的设备地址列表：\n");
+        printf("(可用于hwdef.dat配置)\n\n");
+    }
+
+    printf("========================================\n\n");
+}
+
+/**
+ * ICM-20948特定探测函数
+ *
+ * 尝试读取ICM-20948的WHO_AM_I寄存器（0x00）
+ * 期望值：0xEA
+ */
+void probe_icm20948(uint8_t bus_num, uint8_t addr)
+{
+    printf("\n========================================\n");
+    printf("ICM-20948 详细探测\n");
+    printf("========================================\n");
+    printf("I2C总线: %d\n", bus_num);
+    printf("I2C地址: 0x%02X\n", addr);
+    printf("========================================\n\n");
+
+    auto dev = hal.i2c_mgr->get_device(bus_num, addr);
+    if (!dev) {
+        printf("✗ 无法创建I2C设备对象\n");
+        return;
+    }
+
+    if (!dev->get_semaphore()->take(100)) {
+        printf("✗ 无法获取I2C信号量\n");
+        return;
+    }
+
+    // 读取WHO_AM_I寄存器（地址0x00，Bank 0）
+    uint8_t reg_whoami = 0x00;
+    uint8_t whoami_value = 0;
+
+    printf("读取WHO_AM_I寄存器...\n");
+    bool success = dev->transfer(&reg_whoami, 1, &whoami_value, 1);
+
+    if (!success) {
+        printf("✗ I2C读取失败\n");
+        printf("  可能原因：\n");
+        printf("  - I2C地址错误\n");
+        printf("  - 传感器未响应\n");
+        printf("  - I2C总线故障\n");
+        dev->get_semaphore()->give();
+        return;
+    }
+
+    printf("✓ I2C读取成功\n");
+    printf("WHO_AM_I值: 0x%02X\n", whoami_value);
+
+    // 判断传感器类型
+    if (whoami_value == 0xEA) {
+        printf("✓✓✓ 成功检测到 ICM-20948！\n");
+    } else if (whoami_value == 0xE0) {
+        printf("检测到 ICM-20648\n");
+    } else if (whoami_value == 0xE1) {
+        printf("检测到 ICM-20649\n");
+    } else if (whoami_value == 0x71) {
+        printf("检测到 MPU-9250\n");
+    } else if (whoami_value == 0x70) {
+        printf("检测到 MPU-6500\n");
+    } else if (whoami_value == 0x68) {
+        printf("检测到 MPU-6050\n");
+    } else if (whoami_value == 0x00 || whoami_value == 0xFF) {
+        printf("✗ WHO_AM_I值异常 (0x%02X)\n", whoami_value);
+        printf("  这通常表示I2C通信问题：\n");
+        printf("  - 0x00: 总线可能短路到地\n");
+        printf("  - 0xFF: 总线可能悬空或上拉电阻缺失\n");
+    } else {
+        printf("✗ WHO_AM_I值不匹配\n");
+        printf("  期望值: 0xEA (ICM-20948)\n");
+        printf("  实际值: 0x%02X\n", whoami_value);
+    }
+
+    dev->get_semaphore()->give();
+
+    printf("========================================\n\n");
+}
+
+/**
+ * I2C总线状态诊断函数
+ */
+void diagnose_i2c_bus()
+{
+    printf("\n");
+    printf("========================================\n");
+    printf("I2C总线状态诊断\n");
+    printf("========================================\n\n");
+
+    // 检查I2C管理器是否可用
+    if (hal.i2c_mgr == nullptr) {
+        printf("✗ 严重错误：I2C管理器未初始化！\n");
+        printf("  这表示HAL层I2C驱动未正确加载\n");
+        return;
+    }
+    printf("✓ I2C管理器已初始化\n");
+
+    // 获取I2C总线掩码
+    uint32_t bus_mask = hal.i2c_mgr->get_bus_mask();
+    uint32_t internal_mask = hal.i2c_mgr->get_bus_mask_internal();
+    uint32_t external_mask = hal.i2c_mgr->get_bus_mask_external();
+
+    printf("✓ I2C总线掩码: 0x%08X\n", (unsigned int)bus_mask);
+    printf("  - 内部总线掩码: 0x%08X\n", (unsigned int)internal_mask);
+    printf("  - 外部总线掩码: 0x%08X\n", (unsigned int)external_mask);
+
+    // 检查总线0是否可用
+    if ((bus_mask & 0x01) == 0) {
+        printf("✗ 警告：I2C总线0未配置！\n");
+        printf("  请检查hwdef.dat中的ESP32_I2CBUS配置\n");
+    } else {
+        printf("✓ I2C总线0已配置\n");
+    }
+
+    printf("\n========================================\n\n");
+}
+
+/**
+ * 完整的I2C诊断流程
+ *
+ * 在 AP_InertialSensor::_start_backends() 函数中调用此函数
+ */
+void run_i2c_diagnostics(void)
+{
+    printf("\n\n");
+    printf("╔════════════════════════════════════════╗\n");
+    printf("║   ICM-20948 I2C诊断工具启动           ║\n");
+    printf("╚════════════════════════════════════════╝\n");
+
+    // 延时确保串口输出稳定
+    hal.scheduler->delay(100);
+
+    // 1. 诊断I2C总线状态
+    diagnose_i2c_bus();
+    hal.scheduler->delay(500);
+
+    // 2. 扫描I2C总线0
+    scan_i2c_bus(0);
+    hal.scheduler->delay(500);
+
+    // 3. 特定探测ICM-20948 (地址0x68)
+    probe_icm20948(0, 0x68);
+    hal.scheduler->delay(500);
+
+    // 4. 如果0x68失败，尝试0x69
+    probe_icm20948(0, 0x69);
+
+    printf("\n╔════════════════════════════════════════╗\n");
+    printf("║   I2C诊断完成                         ║\n");
+    printf("╚════════════════════════════════════════╝\n\n");
+}
+
 #include "AP_InertialSensor_BMI160.h"
 #include "AP_InertialSensor_BMI270.h"
 #include "AP_InertialSensor_Backend.h"
@@ -862,6 +1109,15 @@ bool AP_InertialSensor::register_accel(uint8_t &instance, uint16_t raw_sample_ra
 void AP_InertialSensor::_start_backends()
 
 {
+#if defined(HAL_ESP32_BOARD_NAME)
+    // ICM-20948调试：扫描I2C总线
+    static bool diagnostics_run = false;
+    if (!diagnostics_run) {
+        diagnostics_run = true;
+        run_i2c_diagnostics();
+    }
+#endif
+
     detect_backends();
 
     for (uint8_t i = 0; i < _backend_count; i++) {

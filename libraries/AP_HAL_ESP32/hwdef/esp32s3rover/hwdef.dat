@@ -1,5 +1,5 @@
 # ESP32-S3 Rover with ICM20948 and DroneCAN Support
-# Hardware: ESP32-S3-N16R8 (16MB Flash, 8MB PSRAM)
+# Hardware: ESP32-S3-N8R8 (8MB Flash, 8MB PSRAM)
 # Application: USV Rover with ICM20948 IMU and sensor integration
 
 define HAL_ESP32_BOARD_NAME "esp32s3-rover-dronecan"
@@ -8,20 +8,20 @@ define HAL_ESP32_BOARD_NAME "esp32s3-rover-dronecan"
 # IMU / Compass Configuration - ICM20948
 # ========================================================================
 
-# ICM20948 + AK09916 on I2C bus 0 @ 0x68/0x0C
+# ICM20948 + AK09916 on I2C bus 0 @ 0x69/0x0C
 define HAL_INS_DEFAULT HAL_INS_ICM20XXX_I2C
 define HAL_INS_ICM20XXX_I2C_BUS 0
-define HAL_INS_ICM20XXX_I2C_ADDR (0x68)
+define HAL_INS_ICM20XXX_I2C_ADDR (0x69)
 define INS_MAX_INSTANCES 3
 
-define HAL_COMPASS_ICM20948_I2C_ADDR (0x68)
+define HAL_COMPASS_ICM20948_I2C_ADDR (0x69)
 define HAL_COMPASS_AK09916_I2C_BUS 0
 define HAL_COMPASS_AK09916_I2C_ADDR (0x0C)
 define HAL_COMPASS_MAX_SENSORS 3
 define AP_COMPASS_ICM20948_ENABLED 1
 define HAL_PROBE_EXTERNAL_I2C_COMPASSES 1
 
-IMU Invensensev2 I2C:0:0x68 ROTATION_NONE
+IMU Invensensev2 I2C:0:0x69 ROTATION_NONE
 COMPASS AK09916:probe_ICM20948_I2C 0 ROTATION_NONE
 
 # Allow boot without barometer (USV doesn't need barometer)

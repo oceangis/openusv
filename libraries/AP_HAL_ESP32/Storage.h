@@ -23,7 +23,9 @@
 #include "esp_partition.h"
 
 #define STORAGE_SIZE HAL_STORAGE_SIZE
-#define STORAGE_SECTOR_SIZE (128*1024)
+// Reduced from 128KB to 32KB to prevent watchdog timeout during init
+// 32KB is still 2x the HAL_STORAGE_SIZE (16KB), providing sufficient wear leveling
+#define STORAGE_SECTOR_SIZE (32*1024)
 
 #define STORAGE_LINE_SHIFT 3
 

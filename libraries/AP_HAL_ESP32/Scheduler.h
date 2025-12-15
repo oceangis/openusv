@@ -87,9 +87,9 @@ public:
     static const int IO_PRIO             = 8;   // General I/O
     static const int STORAGE_PRIO        = 6;   // Storage operations
 
-    static const int MONITOR_SS   = 1024*2;     // Monitor thread
-    static const int TIMER_SS     = 1024*3;
-    static const int MAIN_SS      = 1024*5;
+    static const int MONITOR_SS   = 1024*4;     // Monitor thread (increased from 2KB to 4KB to fix stack overflow)
+    static const int TIMER_SS     = 1024*4;     // Timer thread (increased from 3KB to 4KB)
+    static const int MAIN_SS      = 1024*6;     // Main thread (increased from 5KB to 6KB)
     static const int RCIN_SS      = 1024*3;
     static const int RCOUT_SS     = 1024*1.5;
     static const int WIFI_SS1     = 1024*2.25;
@@ -97,7 +97,7 @@ public:
     static const int UART_SS      = 1024*2.25;
     static const int DEVICE_SS    = 1024*4;     // DEVICEBUS/s
     static const int IO_SS        = 1024*3.5;   // APM_IO
-    static const int STORAGE_SS   = 1024*2;     // APM_STORAGE
+    static const int STORAGE_SS   = 1024*4;     // APM_STORAGE (increased from 2KB to 4KB to fix stack overflow during Flash operations)
 
 private:
     AP_HAL::HAL::Callbacks *callbacks;

@@ -90,16 +90,32 @@ AP_InertialSensor_Backend *AP_InertialSensor_Invensensev2::probe(AP_InertialSens
                                                                AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev,
                                                                enum Rotation rotation)
 {
+    DEV_PRINTF("[ICM20948] probe: 开始I2C probe，地址0x%02x\n",
+               dev ? dev->get_bus_address() : 0xFF);
+
     if (!dev) {
+        DEV_PRINTF("[ICM20948] probe: I2C设备指针为空，probe失败\n");
         return nullptr;
     }
+
+    DEV_PRINTF("[ICM20948] probe: 创建Invensensev2传感器对象\n");
     AP_InertialSensor_Invensensev2 *sensor =
         NEW_NOTHROW AP_InertialSensor_Invensensev2(imu, std::move(dev), rotation);
-    if (!sensor || !sensor->_init()) {
+
+    if (!sensor) {
+        DEV_PRINTF("[ICM20948] probe: 传感器对象创建失败（内存不足）\n");
+        return nullptr;
+    }
+
+    DEV_PRINTF("[ICM20948] probe: 调用_init()初始化传感器\n");
+    if (!sensor->_init()) {
+        DEV_PRINTF("[ICM20948] probe: _init()失败，删除传感器对象\n");
         delete sensor;
         return nullptr;
     }
+
     sensor->_id = HAL_INS_INV2_I2C;
+    DEV_PRINTF("[ICM20948] probe: 成功！传感器ID设置为HAL_INS_INV2_I2C\n");
 
     return sensor;
 }
@@ -664,19 +680,38 @@ void AP_InertialSensor_Invensensev2::_set_filter_and_scaling(void)
  */
 bool AP_InertialSensor_Invensensev2::_check_whoami(void)
 {
+    DEV_PRINTF("[ICM20948] _check_whoami: 开始读取WHO_AM_I寄存器\n");
+    DEV_PRINTF("[ICM20948] _check_whoami: 寄存器地址=0x%02x\n", INV2REG_WHO_AM_I);
+
     uint8_t whoami = _register_read(INV2REG_WHO_AM_I);
+
+    DEV_PRINTF("[ICM20948] _check_whoami: 读取到的值=0x%02x\n", whoami);
+    DEV_PRINTF("[ICM20948] _check_whoami: 期望值: ICM20948=0x%02x, ICM20648=0x%02x, ICM20649=0x%02x\n",
+               INV2_WHOAMI_ICM20948, INV2_WHOAMI_ICM20648, INV2_WHOAMI_ICM20649);
+
     switch (whoami) {
     case INV2_WHOAMI_ICM20648:
         _inv2_type = Invensensev2_ICM20648;
+        DEV_PRINTF("[ICM20948] _check_whoami: 检测到ICM20648传感器\n");
         return true;
     case INV2_WHOAMI_ICM20948:
         _inv2_type = Invensensev2_ICM20948;
+        DEV_PRINTF("[ICM20948] _check_whoami: 检测到ICM20948传感器 ✓\n");
         return true;
     case INV2_WHOAMI_ICM20649:
         _inv2_type = Invensensev2_ICM20649;
+        DEV_PRINTF("[ICM20948] _check_whoami: 检测到ICM20649传感器\n");
         return true;
     }
-    // not a value WHOAMI result
+
+    // not a valid WHOAMI result
+    DEV_PRINTF("[ICM20948] _check_whoami: WHO_AM_I值不匹配，传感器识别失败 ✗\n");
+    DEV_PRINTF("[ICM20948] _check_whoami: 可能原因：\n");
+    DEV_PRINTF("[ICM20948]   1. I2C地址错误（当前0x68，也可能是0x69）\n");
+    DEV_PRINTF("[ICM20948]   2. I2C通信失败（总线故障、引脚配置错误）\n");
+    DEV_PRINTF("[ICM20948]   3. 传感器未供电或损坏\n");
+    DEV_PRINTF("[ICM20948]   4. I2C引脚SDA/SCL配置错误\n");
+
     return false;
 }
 
@@ -684,16 +719,23 @@ bool AP_InertialSensor_Invensensev2::_hardware_init(void)
 {
     WITH_SEMAPHORE(_dev->get_semaphore());
 
+    DEV_PRINTF("[ICM20948] _hardware_init: ===== 开始硬件初始化 =====\n");
+    DEV_PRINTF("[ICM20948] _hardware_init: I2C总线类型: %s\n",
+               _dev->bus_type() == AP_HAL::Device::BUS_TYPE_I2C ? "I2C" : "SPI");
+
     // disabled setup of checked registers as it can't cope with bank switching
     _dev->setup_checked_registers(7, _dev->bus_type() == AP_HAL::Device::BUS_TYPE_I2C?200:20);
     _dev->setup_bankselect_callback(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Invensensev2::_select_bank, bool, uint8_t));
 
     // initially run the bus at low speed
+    DEV_PRINTF("[ICM20948] _hardware_init: 设置低速模式...\n");
     _dev->set_speed(AP_HAL::Device::SPEED_LOW);
 
     if (!_check_whoami()) {
+        DEV_PRINTF("[ICM20948] _hardware_init: WHO_AM_I检查失败，硬件初始化中止\n");
         return false;
     }
+    DEV_PRINTF("[ICM20948] _hardware_init: WHO_AM_I检查通过 ✓\n");
 
     // Chip reset
     uint8_t tries;
@@ -745,10 +787,13 @@ bool AP_InertialSensor_Invensensev2::_hardware_init(void)
         return false;
     }
 
+    DEV_PRINTF("[ICM20948] _hardware_init: 芯片复位和唤醒完成，使用了%d次尝试\n", tries + 1);
+
     if (_inv2_type == Invensensev2_ICM20649) {
         _clip_limit = 29.5f * GRAVITY_MSS;
     }
 
+    DEV_PRINTF("[ICM20948] _hardware_init: ===== 硬件初始化成功 ===== ✓\n");
     return true;
 }
 
