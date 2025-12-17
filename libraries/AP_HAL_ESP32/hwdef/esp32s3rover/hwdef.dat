@@ -1,6 +1,7 @@
 # ESP32-S3 Rover with ICM20948 and DroneCAN Support
 # Hardware: ESP32-S3-N8R8 (8MB Flash, 8MB PSRAM)
 # Application: USV Rover with ICM20948 IMU and sensor integration
+# Updated: 2025-12-15 - 修复GPIO引脚与原理图一致
 
 define HAL_ESP32_BOARD_NAME "esp32s3-rover-dronecan"
 
@@ -31,7 +32,7 @@ define HAL_BARO_ALLOW_INIT_NO_BARO 1
 # Serial Port Configuration
 # ========================================================================
 
-# UART0: USB Serial (GPIO44/43) - MAVLink telemetry, console
+# UART0: USB Serial (GPIO1/43) - MAVLink telemetry, console
 define DEFAULT_SERIAL0_PROTOCOL SerialProtocol_MAVLink2
 define DEFAULT_SERIAL0_BAUD 115200
 
@@ -43,13 +44,6 @@ define DEFAULT_SERIAL3_BAUD 38400
 define DEFAULT_SERIAL2_PROTOCOL SerialProtocol_None
 define DEFAULT_SERIAL2_BAUD 4800
 
-# Additional UARTs for sensors
-define DEFAULT_SERIAL4_PROTOCOL SerialProtocol_None
-define DEFAULT_SERIAL4_BAUD 9600
-
-define DEFAULT_SERIAL5_PROTOCOL SerialProtocol_None
-define DEFAULT_SERIAL5_BAUD 115200
-
 # GPS Configuration
 define GPS_TYPE 1
 define GPS_TYPE2 0
@@ -58,15 +52,18 @@ define GPS_MAX_RECEIVERS 2
 define GPS_MAX_INSTANCES 2
 
 # ========================================================================
-# Hardware Pin Mapping
+# Hardware Pin Mapping (与原理图一致)
 # ========================================================================
 
 # UART GPIO Pin Mapping
-ESP32_SERIAL  UART_NUM_0  GPIO_NUM_44  GPIO_NUM_43
+# UART0: TX=GPIO1, RX=GPIO43 (USB串口)
+ESP32_SERIAL  UART_NUM_0  GPIO_NUM_1   GPIO_NUM_43
+# UART1: TX=GPIO17, RX=GPIO18 (GPS)
 ESP32_SERIAL  UART_NUM_1  GPIO_NUM_17  GPIO_NUM_18
+# UART2: TX=GPIO16, RX=GPIO15 (DST800测深仪)
 ESP32_SERIAL  UART_NUM_2  GPIO_NUM_16  GPIO_NUM_15
 
-# I2C bus with SDA=8 / SCL=9 (INT=GPIO15 if interrupt used) for the ICM20948 IMU
+# I2C bus with SDA=8 / SCL=9 for the ICM20948 IMU
 ESP32_I2CBUS  I2C_NUM_0  GPIO_NUM_8  GPIO_NUM_9  400*KHZ  true  false
 
 # SPI bus (virtual - required for SPIDeviceManager)
@@ -76,11 +73,11 @@ ESP32_SPIBUS  SPI3_HOST  SPI_DMA_CH_AUTO  GPIO_NUM_NC  GPIO_NUM_NC  GPIO_NUM_NC
 ESP32_SPIDEV  dummy  0  0  GPIO_NUM_NC  0  1*MHZ  1*MHZ
 
 # ========================================================================
-# DroneCAN Configuration
+# DroneCAN Configuration (与原理图一致)
 # ========================================================================
 
-# DroneCAN / CAN on GPIO47(TX) / GPIO38(RX)
-ESP32_CAN  TWAI_NUM_0  GPIO_NUM_47  GPIO_NUM_38  1000000
+# DroneCAN / CAN: TX=GPIO47, RX=GPIO3
+ESP32_CAN  TWAI_NUM_0  GPIO_NUM_3   GPIO_NUM_20  1000000
 define HAL_NUM_CAN_IFACES 1
 define HAL_ENABLE_DRONECAN_DRIVERS 1
 define AP_DRONECAN_ENABLED 1
@@ -96,14 +93,15 @@ define HAL_CAN_RX_QUEUE_SIZE 128
 define HAL_CAN_TX_QUEUE_SIZE 32
 
 # ========================================================================
-# RC Output (optional - for motor control)
+# RC Output - PWM (与原理图一致)
 # ========================================================================
 
-# RC output pins (6 channels) - adjust if needed
+# PWM输出: GPIO11, GPIO45, GPIO46, GPIO48, GPIO13
 ESP32_RCOUT GPIO_NUM_11
-ESP32_RCOUT GPIO_NUM_10
-ESP32_RCOUT GPIO_NUM_7
-ESP32_RCOUT GPIO_NUM_6
+ESP32_RCOUT GPIO_NUM_45
+ESP32_RCOUT GPIO_NUM_46
+ESP32_RCOUT GPIO_NUM_48
+ESP32_RCOUT GPIO_NUM_13
 
 # RC input - virtual pin for compilation
 define HAL_ESP32_RMT_RX_PIN_NUMBER GPIO_NUM_NC
@@ -143,5 +141,39 @@ define HAL_LOGGING_BACKENDS_DEFAULT 1
 # Power Management
 # ========================================================================
 
+# 气象站电源控制
 define HAL_ESP32_GPIO_WEATHER_PWR GPIO_NUM_12
 define HAL_ESP32_ENABLE_LIGHT_SLEEP 0
+
+
+# ========================================================================
+# LoRa MAVLink Communication (SX1262)
+# ========================================================================
+
+# LoRa operates as SERIAL4 for MAVLink telemetry
+# Virtual UART using LoRa transport layer
+# Configuration: SF8, BW125, CR4/5, 433MHz, ~3-5km range
+
+# Enable LoRa UART driver (custom implementation)
+define HAL_ESP32_ENABLE_LORA_UART 1
+
+# LoRa as SERIAL4
+define DEFAULT_SERIAL4_PROTOCOL SerialProtocol_MAVLink2
+define DEFAULT_SERIAL4_BAUD 57600
+
+# LoRa SPI and GPIO pins (from schematic)
+define LORA_PIN_SCK     GPIO_NUM_35
+define LORA_PIN_MISO    GPIO_NUM_36
+define LORA_PIN_MOSI    GPIO_NUM_37
+define LORA_PIN_CS      GPIO_NUM_39
+define LORA_PIN_RST     GPIO_NUM_42
+define LORA_PIN_BUSY    GPIO_NUM_40
+define LORA_PIN_DIO1    GPIO_NUM_41
+
+# LoRa default configuration
+define LORA_FREQ_HZ     433000000   # 433 MHz
+define LORA_TX_POWER    20          # 20 dBm
+define LORA_SF          8           # Spreading Factor 8
+define LORA_BW          125         # 125 kHz bandwidth
+
+

@@ -21,6 +21,7 @@
 #include "I2CDevice.h"
 #include "SPIDevice.h"
 #include "UARTDriver.h"
+#include "LoRaUARTDriver.h"
 #include "WiFiDriver.h"
 #include "WiFiUdpDriver.h"
 #include "RCInput.h"
@@ -51,7 +52,7 @@ static Empty::UARTDriver serial1Driver;
 #endif
 static ESP32::UARTDriver serial2Driver(2);
 static ESP32::UARTDriver serial3Driver(1);
-static Empty::UARTDriver serial4Driver;
+static ESP32::LoRaUARTDriver serial4Driver;  // LoRa MAVLink telemetry
 static Empty::UARTDriver serial5Driver;
 static Empty::UARTDriver serial6Driver;
 static Empty::UARTDriver serial7Driver;

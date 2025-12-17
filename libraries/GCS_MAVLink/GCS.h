@@ -862,10 +862,10 @@ private:
         uint16_t interval_ms;
         uint16_t last_sent_ms; // from AP_HAL::millis16()
     } deferred_message[3] = {
-        { MSG_HEARTBEAT, },
-        { MSG_NEXT_PARAM, },
+        { MSG_HEARTBEAT, 0, 0 },
+        { MSG_NEXT_PARAM, 0, 0 },
 #if HAL_HIGH_LATENCY2_ENABLED
-        { MSG_HIGH_LATENCY2, },
+        { MSG_HIGH_LATENCY2, 0, 0 },
 #endif
     };
     // returns index of id in deferred_message[] or -1 if not present

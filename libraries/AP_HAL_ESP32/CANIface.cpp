@@ -18,12 +18,13 @@
 extern const AP_HAL::HAL& hal;
 
 // Default TWAI GPIO pins (override in hwdef.dat)
+// 原理图: CAN-TX=GPIO3, CAN-RX=GPIO20
 #ifndef HAL_ESP32_CAN1_TX_PIN
-#define HAL_ESP32_CAN1_TX_PIN GPIO_NUM_47
+#define HAL_ESP32_CAN1_TX_PIN GPIO_NUM_3
 #endif
 
 #ifndef HAL_ESP32_CAN1_RX_PIN
-#define HAL_ESP32_CAN1_RX_PIN GPIO_NUM_38
+#define HAL_ESP32_CAN1_RX_PIN GPIO_NUM_20
 #endif
 
 // ESP32 clock configuration

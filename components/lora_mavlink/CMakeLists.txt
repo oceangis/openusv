@@ -1,0 +1,13 @@
+idf_component_register(
+    SRCS
+        "src/lora_mavlink.c"
+        "src/sx126x_hal_esp32.c"
+        "src/sx126x.c"
+    INCLUDE_DIRS
+        "include"
+    REQUIRES
+        driver
+        esp_timer
+        freertos
+        log
+)

@@ -633,6 +633,18 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Path: mode_circle.cpp
     AP_SUBGROUPINFO(mode_circle, "CIRC", 57, ParametersG2, ModeCircle),
 
+#if AP_WIFI_ESP32_ENABLED
+    // @Group: WIFI_
+    // @Path: ../libraries/AP_WiFi_ESP32/AP_WiFi_ESP32.cpp
+    AP_SUBGROUPINFO(wifi, "WIFI_", 58, ParametersG2, AP_WiFi_ESP32),
+#endif
+
+#if AP_LORA_ESP32_ENABLED
+    // @Group: LORA_
+    // @Path: ../libraries/AP_LoRa_ESP32/AP_LoRa_ESP32.cpp
+    AP_SUBGROUPINFO(lora, "LORA_", 59, ParametersG2, AP_LoRa_ESP32),
+#endif
+
     AP_GROUPEND
 };
 
@@ -694,6 +706,12 @@ ParametersG2::ParametersG2(void)
     wp_nav(attitude_control, pos_control),
     sailboat(),
     pos_control(attitude_control)
+#if AP_WIFI_ESP32_ENABLED
+    , wifi()
+#endif
+#if AP_LORA_ESP32_ENABLED
+    , lora()
+#endif
 {
     AP_Param::setup_object_defaults(this, var_info);
 }

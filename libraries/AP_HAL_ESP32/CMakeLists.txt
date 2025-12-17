@@ -27,6 +27,7 @@ idf_component_register(
         "Util.cpp"
         "WiFiDriver.cpp"
         "WiFiUdpDriver.cpp"
+        "LoRaUARTDriver.cpp"
         "i2c_sw.c"
     INCLUDE_DIRS
         "."
@@ -53,7 +54,7 @@ idf_component_register(
         "targets/esp32s3/esp-idf"
         "utils"
         "utils/profile"
-    REQUIRES freertos esp_timer driver
+    REQUIRES freertos esp_timer driver lora_mavlink
 )
 
 # 完整源文件列表

@@ -99,7 +99,9 @@ typedef ESP32::CANIface HAL_CANIface;
 
 
 // whenver u get ... error: "xxxxxxx" is not defined, evaluates to 0 [-Werror=undef]  just define it below as 0
+#ifndef CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
 #define CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY 0
+#endif
 #define XCHAL_ERRATUM_453 0
 //#define CONFIG_FREERTOS_CORETIMER_0 0
 #define CONFIG_FREERTOS_CHECK_STACKOVERFLOW_NONE 0

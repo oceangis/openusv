@@ -135,6 +135,9 @@ const AP_Scheduler::Task Rover::scheduler_tasks[] = {
 #if AP_ROVER_ADVANCED_FAILSAFE_ENABLED
     SCHED_TASK(afs_fs_check,           10,    200, 129),
 #endif
+#if AP_WIFI_ESP32_ENABLED
+    SCHED_TASK_CLASS(AP_WiFi_ESP32,       &rover.g2.wifi,          update,          2,  200, 132),
+#endif
 };
 
 

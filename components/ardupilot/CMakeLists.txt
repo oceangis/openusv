@@ -307,6 +307,8 @@ set(COMPONENT_ADD_INCLUDEDIRS
     "../../libraries/SRV_Channel"
     "../../libraries/StorageManager"
     "../../libraries/doc"
+    "../../libraries/AP_WiFi_ESP32"
+    "../../libraries/AP_LoRa_ESP32"
 )
 
 # Exclude AC_* include directories from global include path
@@ -345,6 +347,8 @@ idf_component_register(
         esp_driver_mcpwm
         esp_system
         esp_rom
+        lora_mavlink
+        wifi_config
 )
 
 # Append ArduPilot paths after IDF/toolchain dirs (matching upstream waf)

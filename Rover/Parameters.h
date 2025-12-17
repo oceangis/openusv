@@ -3,6 +3,8 @@
 #include <AP_Common/AP_Common.h>
 
 #include "RC_Channel_Rover.h"
+#include <AP_WiFi_ESP32/AP_WiFi_ESP32.h>
+#include <AP_LoRa_ESP32/AP_LoRa_ESP32.h>
 #include <AC_Avoidance/AC_Avoid.h>
 #include "AC_Sprayer/AC_Sprayer.h"
 #include <AP_AIS/AP_AIS.h>
@@ -428,6 +430,16 @@ public:
     AP_Float fs_gcs_timeout;
 
     class ModeCircle mode_circle;
+
+#if AP_WIFI_ESP32_ENABLED
+    // WiFi configuration module
+    AP_WiFi_ESP32 wifi;
+#endif
+
+#if AP_LORA_ESP32_ENABLED
+    // LoRa telemetry configuration
+    AP_LoRa_ESP32 lora;
+#endif
 };
 
 extern const AP_Param::Info var_info[];
