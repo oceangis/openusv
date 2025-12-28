@@ -1,0 +1,111 @@
+# ESP32-S3 USV (Unmanned Surface Vehicle) Default Parameters
+# 无人船精简参数配置
+
+# ========================================
+# Arming Configuration
+# ========================================
+# ARMING_CHECK = 0: Disable all pre-arm checks (最宽松)
+# ARMING_CHECK = 8: Only require GPS
+# ARMING_CHECK = 12: Require GPS + Compass
+ARMING_CHECK     0            # 禁用所有预解锁检查（无人船推荐）
+
+# Arming require mode
+# 0=No require, 1=Require RC throttle min, 3=Auto arm once
+ARMING_REQUIRE   0            # 不需要遥控器即可解锁
+
+# ========================================
+# Failsafe Configuration
+# ========================================
+FS_THR_ENABLE    0            # 禁用遥控器失联保护（使用GCS/MAVLink控制）
+FS_GCS_ENABLE    0            # 禁用GCS失联保护
+FS_ACTION        0            # 失联时不采取动作
+
+# ========================================
+# Boat/USV Frame Configuration
+# ========================================
+FRAME_CLASS      2            # Boat frame
+
+# ========================================
+# Motor Configuration (Differential Thrust)
+# ========================================
+SERVO1_FUNCTION  73           # Throttle Left
+SERVO2_FUNCTION  74           # Throttle Right
+SERVO3_FUNCTION  0            # Disabled
+SERVO4_FUNCTION  0            # Disabled
+
+# ========================================
+# External AHRS - BNO08x Configuration
+# ========================================
+EAHRS_TYPE       11           # BNO08x ExternalAHRS (I2C地址0x4A或0x4B)
+EAHRS_RATE       50           # 50Hz更新率 (匹配主循环频率)
+EAHRS_SENSORS    3            # 使用IMU和姿态数据 (bit0=GPS, bit1=IMU, bit2=Baro, bit3=Compass)
+
+# ========================================
+# AHRS/EKF Configuration - 使用 ExternalAHRS (BNO08x)
+# ========================================
+# AHRS_EKF_TYPE: 2=EKF2, 3=EKF3, 11=ExternalAHRS
+AHRS_EKF_TYPE    11           # Use ExternalAHRS (BNO08x) - 避免 EKF3 因 GPS 丢失而重置
+EK3_ENABLE       0            # 禁用 EKF3 防止冲突
+EK2_ENABLE       0            # 禁用 EKF2 防止冲突
+
+# GPS 源配置 (当 GPS 可用时)
+EK3_SRC1_POSXY   3            # GPS for horizontal position
+EK3_SRC1_VELXY   3            # GPS for horizontal velocity
+EK3_SRC1_POSZ    1            # Baro for altitude (if available)
+EK3_SRC1_YAW     1            # Compass for yaw
+
+# ========================================
+# Compass Configuration
+# ========================================
+COMPASS_USE      1            # Use compass
+COMPASS_USE2     0            # Don't use 2nd compass
+COMPASS_USE3     0            # Don't use 3rd compass
+COMPASS_LEARN    0            # Disable auto learning
+
+# ========================================
+# INS Configuration
+# ========================================
+INS_GYR_CAL      0            # Disable gyro calibration on boot (faster startup)
+INS_ACCEL_FILTER 10           # Low pass filter for rover
+
+# ========================================
+# Navigation Parameters
+# ========================================
+WP_RADIUS        3            # Waypoint radius (meters)
+WP_SPEED         1.0          # Default speed (m/s)
+TURN_RADIUS      1.5          # Turn radius (meters)
+NAV_SPEED        1.0          # Navigation speed (m/s)
+
+# ========================================
+# Throttle Configuration
+# ========================================
+MOT_THR_MIN      -100         # Allow reverse thrust
+MOT_THR_MAX      100          # Max forward thrust
+CRUISE_SPEED     1.0          # Cruise speed (m/s)
+CRUISE_THROTTLE  30           # Cruise throttle (%)
+
+# ========================================
+# Scheduler
+# ========================================
+SCHED_LOOP_RATE  50           # 50Hz loop rate (sufficient for boat)
+
+# ========================================
+# Board Configuration
+# ========================================
+# BRD_OPTIONS bitmask:
+# bit0: Enable hardware watchdog
+# bit1: Disable MAVftp (解决参数读取卡死问题)
+# bit2: Enable set of internal parameters
+BRD_OPTIONS      2            # 禁用 MAVftp (使用传统参数下载，更稳定)
+
+# ========================================
+# Logging
+# ========================================
+LOG_BACKEND_TYPE 1            # Log to SD card
+LOG_BITMASK      176126       # Default logging mask
+
+# ========================================
+# Serial Configuration
+# ========================================
+SERIAL0_PROTOCOL 2            # MAVLink2 on USB
+SERIAL0_BAUD     115200

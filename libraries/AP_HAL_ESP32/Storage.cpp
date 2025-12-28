@@ -18,7 +18,7 @@
 #include "Storage.h"
 #include "esp_task_wdt.h"
 
-#define STORAGEDEBUG 1
+// #define STORAGEDEBUG 1  // 禁用Storage调试输出
 
 using namespace ESP32;
 

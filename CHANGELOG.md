@@ -1,5 +1,35 @@
 # Changelog
 
+## [v1.4.0] - 2025-12-28
+
+### 新增 (Added)
+- **u-blox MAX-M10S GPS 支持**: 成功读取 GPS 数据
+  - 自动检测并配置波特率
+  - 支持 u-blox 协议
+
+- **BNO08x IMU 数据读取**: 成功读取姿态数据
+  - Roll/Pitch/Yaw 欧拉角输出
+  - 50Hz 更新率
+  - ENU 到 NED 坐标系转换
+
+### 修复 (Fixed)
+- **AHRS ExternalAHRS 集成**: 修复 BNO08x 姿态数据未被导航使用的问题
+  - 添加 `HAL_AHRS_EKF_TYPE_DEFAULT 11` 默认参数
+  - 修改 `_active_EKF_type()` 回退逻辑，ExternalAHRS 只检查 attitude 标志
+  - 跳过对纯 AHRS 传感器不适用的 GPS/位置回退检查
+
+### 技术细节
+- **参数配置**:
+  - `AHRS_EKF_TYPE = 11` - 使用 ExternalAHRS
+  - `EAHRS_TYPE = 11` - BNO08x 类型
+  - EKF2/EKF3 已禁用，仅使用 ExternalAHRS
+
+- **硬件验证**:
+  - GPS: u-blox MAX-M10S @ UART1 (GPIO17/18)
+  - IMU: BNO08x @ I2C (GPIO9/10, 地址 0x4B)
+
+---
+
 ## [v1.3] - 2025-12-17
 
 ### 新增 (Added)

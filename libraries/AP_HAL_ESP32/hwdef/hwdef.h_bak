@@ -30,9 +30,6 @@
 #define AP_EXTERNAL_AHRS_INERTIALLABS_ENABLED 0
 #define AP_EXTERNAL_AHRS_SBG_ENABLED 0
 #define HAL_EXTERNAL_AHRS_DEFAULT 11
-#define HAL_AHRS_EKF_TYPE_DEFAULT 11
-#define HAL_NAVEKF2_AVAILABLE 0
-#define HAL_NAVEKF3_AVAILABLE 0
 #define HAL_BRD_OPTIONS_DEFAULT 2
 #define DEFAULT_SERIAL0_PROTOCOL SerialProtocol_MAVLink2
 #define DEFAULT_SERIAL0_BAUD 115200
@@ -90,8 +87,6 @@
 #define LORA_SF          8
 #define LORA_BW          125
 #define HAL_ESP32_ENABLE_LIGHT_SLEEP 0
-#define AP_WIFI_ESP32_ENABLED 0
-#define AP_WIFI_ESP32_ENABLED 0
 
 // SPI buses table
 #define HAL_ESP32_SPI_BUSES \
@@ -103,12 +98,12 @@
 
 // i2c buses table
 #define HAL_ESP32_I2C_BUSES \
-   { .port=I2C_NUM_0, .sda=GPIO_NUM_9, .scl=GPIO_NUM_10, .speed=400*KHZ, .internal=true, .soft=false }
+   { .port=I2C_NUM_0, .sda=GPIO_NUM_9, .scl=GPIO_NUM_10, .speed=100*KHZ, .internal=true, .soft=false }
 
 // serial devices table
 #define HAL_ESP32_UART_DEVICES \
    { .port=UART_NUM_0, .rx=GPIO_NUM_44, .tx=GPIO_NUM_43 },\
-   { .port=UART_NUM_1, .rx=GPIO_NUM_18, .tx=GPIO_NUM_17 }
+   { .port=UART_NUM_1, .rx=GPIO_NUM_17, .tx=GPIO_NUM_18 }
 #define HAL_ESP32_RCOUT { GPIO_NUM_11, GPIO_NUM_45, GPIO_NUM_46, GPIO_NUM_48, GPIO_NUM_13 }
 
 // No SDSPI configuration

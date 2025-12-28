@@ -227,12 +227,16 @@ esp_err_t wifi_config_system_init(void)
         return ESP_ERR_NO_MEM;
     }
 
-    // Initialize NVS
+    // Initialize NVS - check if already initialized
     ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_LOGW(TAG, "NVS partition needs erase");
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
+    } else if (ret == ESP_ERR_INVALID_STATE) {
+        // NVS already initialized (probably by ArduPilot Storage)
+        ESP_LOGI(TAG, "NVS already initialized, skipping");
+        ret = ESP_OK;
     }
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "NVS init failed: %s", esp_err_to_name(ret));
@@ -247,29 +251,64 @@ esp_err_t wifi_config_system_init(void)
         save_config_to_nvs();
     }
 
-    // Initialize TCP/IP stack
+    // Initialize TCP/IP stack - check if already initialized
     ret = esp_netif_init();
-    if (ret != ESP_OK) {
+    if (ret == ESP_ERR_INVALID_STATE) {
+        // Already initialized (probably by ArduPilot WiFiDriver)
+        ESP_LOGI(TAG, "Netif already initialized, skipping");
+        ret = ESP_OK;
+    } else if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Netif init failed: %s", esp_err_to_name(ret));
         return ret;
     }
 
-    // Create default event loop
+    // Create default event loop - check if already exists
     ret = esp_event_loop_create_default();
-    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+    if (ret == ESP_ERR_INVALID_STATE) {
+        // Event loop already created
+        ESP_LOGI(TAG, "Event loop already created, skipping");
+        ret = ESP_OK;
+    } else if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Event loop create failed: %s", esp_err_to_name(ret));
         return ret;
     }
 
-    // Create network interfaces
-    s_sta_netif = esp_netif_create_default_wifi_sta();
-    s_ap_netif = esp_netif_create_default_wifi_ap();
+    // Create network interfaces - use esp_netif_get_handle_from_ifkey to check
+    s_sta_netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    s_ap_netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
 
-    // Initialize WiFi with default config
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ret = esp_wifi_init(&cfg);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "WiFi init failed: %s", esp_err_to_name(ret));
+    if (s_sta_netif == NULL) {
+        s_sta_netif = esp_netif_create_default_wifi_sta();
+        ESP_LOGI(TAG, "Created WiFi STA interface");
+    } else {
+        ESP_LOGI(TAG, "WiFi STA interface already exists");
+    }
+
+    if (s_ap_netif == NULL) {
+        s_ap_netif = esp_netif_create_default_wifi_ap();
+        ESP_LOGI(TAG, "Created WiFi AP interface");
+    } else {
+        ESP_LOGI(TAG, "WiFi AP interface already exists");
+    }
+
+    // Initialize WiFi with default config - check if already initialized
+    wifi_mode_t current_mode;
+    ret = esp_wifi_get_mode(&current_mode);
+    if (ret == ESP_ERR_WIFI_NOT_INIT) {
+        // WiFi not initialized yet, initialize it
+        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+        ret = esp_wifi_init(&cfg);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "WiFi init failed: %s", esp_err_to_name(ret));
+            return ret;
+        }
+        ESP_LOGI(TAG, "WiFi driver initialized");
+    } else if (ret == ESP_OK) {
+        // WiFi already initialized by ArduPilot
+        ESP_LOGW(TAG, "WiFi driver already initialized (probably by ArduPilot), reusing");
+        // We'll reconfigure it below
+    } else {
+        ESP_LOGE(TAG, "WiFi get_mode failed: %s", esp_err_to_name(ret));
         return ret;
     }
 
@@ -779,6 +818,12 @@ esp_err_t wifi_config_get_config(wifi_system_config_t *config)
 {
     if (!config) return ESP_ERR_INVALID_ARG;
 
+    // 防御性检查：如果系统未初始化，返回错误而不是崩溃
+    if (!s_config_mutex) {
+        ESP_LOGW(TAG, "wifi_config not initialized, call wifi_config_system_init() first");
+        return ESP_ERR_INVALID_STATE;
+    }
+
     xSemaphoreTake(s_config_mutex, portMAX_DELAY);
     memcpy(config, &s_config, sizeof(wifi_system_config_t));
     xSemaphoreGive(s_config_mutex);
@@ -789,6 +834,12 @@ esp_err_t wifi_config_get_config(wifi_system_config_t *config)
 esp_err_t wifi_config_set_config(const wifi_system_config_t *config, bool save_to_nvs)
 {
     if (!config) return ESP_ERR_INVALID_ARG;
+
+    // 防御性检查：如果系统未初始化，返回错误
+    if (!s_config_mutex) {
+        ESP_LOGW(TAG, "wifi_config not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
 
     xSemaphoreTake(s_config_mutex, portMAX_DELAY);
     memcpy(&s_config, config, sizeof(wifi_system_config_t));
@@ -803,6 +854,12 @@ esp_err_t wifi_config_set_config(const wifi_system_config_t *config, bool save_t
 
 esp_err_t wifi_config_reset_defaults(void)
 {
+    // 防御性检查
+    if (!s_config_mutex) {
+        ESP_LOGW(TAG, "wifi_config not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+
     xSemaphoreTake(s_config_mutex, portMAX_DELAY);
     set_default_config();
     esp_err_t ret = save_config_to_nvs();

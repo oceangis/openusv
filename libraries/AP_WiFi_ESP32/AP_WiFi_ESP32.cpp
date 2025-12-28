@@ -161,6 +161,15 @@ void AP_WiFi_ESP32::init()
         return;
     }
 
+    // 确保WiFi配置系统已初始化
+    // 如果main.c中ENABLE_WIFI_CONFIG=0，这里需要初始化
+    // wifi_config_system_init()可以安全地多次调用（已有重复调用保护）
+    esp_err_t err = wifi_config_system_init();
+    if (err != ESP_OK) {
+        hal.console->printf("AP_WiFi_ESP32: wifi_config_system_init failed: %d\n", err);
+        return;
+    }
+
     // Register our save callback so Web interface changes come through AP_Param
     wifi_config_register_save_callback(wifi_config_save_to_ap_param);
 

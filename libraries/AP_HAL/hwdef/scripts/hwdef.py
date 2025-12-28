@@ -67,7 +67,7 @@ class HWDef:
 
     def load_file_with_include(self, fname):
         '''load a file as an array of lines, processing any include lines'''
-        lines = open(fname, 'r').readlines()
+        lines = open(fname, 'r', encoding='utf-8').readlines()
         ret = []
         for line in lines:
             if line.startswith("include"):
@@ -103,7 +103,7 @@ class HWDef:
         topdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../../..')
         board_types_dirpath = os.path.join(topdir, "Tools", "AP_Bootloader")
         board_types_filepath = os.path.join(board_types_dirpath, board_types_filename)
-        for line in open(board_types_filepath, 'r'):
+        for line in open(board_types_filepath, 'r', encoding='utf-8'):
             m = re.match(r"(?P<name>[-\w]+)\s+(?P<board_id>\d+)", line)
             if m is None:
                 continue
@@ -161,7 +161,7 @@ class HWDef:
         self.progress(f"Processing {filename}")
         self.loaded_files.add(os.path.abspath(filename))
         try:
-            f = open(filename, "r")
+            f = open(filename, "r", encoding="utf-8")
         except Exception as e:
             if False:
                 raise e

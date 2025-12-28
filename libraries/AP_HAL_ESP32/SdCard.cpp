@@ -94,84 +94,101 @@ void mount_sdcard_mmc()
     WITH_SEMAPHORE(sem);
 
     /*
-    https://docs.espressif.com/projects/esp-idf/en/v4.1/api-reference/peripherals/sdmmc_host.html
+    ESP32-S3 SDMMC GPIO Configuration (from schematic):
+    - CLK  = GPIO6
+    - CMD  = GPIO7
+    - DAT0 = GPIO5
+    - DAT1 = GPIO4
+    - DAT2 = GPIO16
+    - DAT3 = GPIO15
 
-    // we take the MMC parts from this example:
-    https://github.com/espressif/esp-idf/blob/release/v4.1/examples/storage/sd_card/main/sd_card_example_main.c
-
-    hardcoded SDMMC gpio options....
-
-    Slot 0 (SDMMC_HOST_SLOT_0) is an 8-bit slot. It uses HS1_* signals in the PIN MUX.- dont use slot0, is used for SPI-flash chip.
-
-    Slot 1 (SDMMC_HOST_SLOT_1) is a 4-bit slot. It uses HS2_* signals in the PIN MUX.
-
-    this is the full list, but u can get away without some (2 or 3) of these in some cases:
-    Signal	Slot 1
-      CMD	GPIO15
-      CLK	GPIO14
-      D0	GPIO2
-      D1	GPIO4
-      D2	GPIO12
-      D3	GPIO13
-
+    Using 4-bit mode for maximum performance.
+    All lines have external 10k pull-ups on PCB.
     */
 
-    //  the dedicated SDMMC host peripheral on the esp32 is about twice as fast as SD card SPI interface in '1-line' mode and somewht faster again in '4-line' mode.  we've using 1-line mode in this driver, so we need less gpio's
-
     static const char *TAG = "SD...";
-    ESP_LOGI(TAG, "Initializing SD card as SDMMC");
+    ESP_LOGI(TAG, "Initializing SD card as SDMMC (ESP32-S3)");
 
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+    host.max_freq_khz = SDMMC_FREQ_DEFAULT;  // 20MHz for stability
 
-    // This initializes the slot without card detect (CD) and write protect (WP) signals.
-    // Modify slot_config.gpio_cd and slot_config.gpio_wp if your board has these signals.
-    sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
+    // Configure slot with custom GPIO pins for ESP32-S3
+    sdmmc_slot_config_t slot_config = {
+        .clk = GPIO_NUM_6,
+        .cmd = GPIO_NUM_7,
+        .d0 = GPIO_NUM_5,
+        .d1 = GPIO_NUM_4,
+        .d2 = GPIO_NUM_16,
+        .d3 = GPIO_NUM_15,
+        .d4 = GPIO_NUM_NC,  // Not used in 4-bit mode
+        .d5 = GPIO_NUM_NC,
+        .d6 = GPIO_NUM_NC,
+        .d7 = GPIO_NUM_NC,
+        .cd = SDMMC_SLOT_NO_CD,
+        .wp = SDMMC_SLOT_NO_WP,
+        .width = 4,  // 4-bit mode
+        .flags = 0,
+    };
 
-    // To use 1-line SD mode (this driver does), uncomment the following line:
-    slot_config.width = 1;
+    // Enable internal pull-ups (external 10k pull-ups also present on PCB)
+    gpio_set_pull_mode(GPIO_NUM_7, GPIO_PULLUP_ONLY);   // CMD
+    gpio_set_pull_mode(GPIO_NUM_5, GPIO_PULLUP_ONLY);   // DAT0
+    gpio_set_pull_mode(GPIO_NUM_4, GPIO_PULLUP_ONLY);   // DAT1
+    gpio_set_pull_mode(GPIO_NUM_16, GPIO_PULLUP_ONLY);  // DAT2
+    gpio_set_pull_mode(GPIO_NUM_15, GPIO_PULLUP_ONLY);  // DAT3
 
-    // GPIOs 15, 2, 4, 12, 13 should have external 10k pull-ups.
-    // Internal pull-ups are not sufficient. However, enabling internal pull-ups
-    // does make a difference some boards, so we do that here.
-    gpio_set_pull_mode(GPIO_NUM_15, GPIO_PULLUP_ONLY);   // CMD, needed in 4- and 1- line modes
-    gpio_set_pull_mode(GPIO_NUM_2, GPIO_PULLUP_ONLY);    // D0, needed in 4- and 1-line modes
-    //gpio_set_pull_mode(GPIO_NUM_4, GPIO_PULLUP_ONLY);    // D1, needed in 4-line mode only
-    //gpio_set_pull_mode(GPIO_NUM_12, GPIO_PULLUP_ONLY);   // D2, needed in 4-line mode only
-    //
-    // Pin 13 / chip-select  - is an interesting one, because if its the only thing on this
-    //   spi bus(it is), then NOT connecting the SD to this pin, and instead directly to a pull-up
-    //   also asserts the CS pin 'permanently high' to the SD card, without the micro being involved..
-    //   which means pin 13 on micro can be re-used elsewhere. If one of these isn't true for u,
-    //   then uncomment this line and connect it electrically to the CS pin on the SDcard.
-    //gpio_set_pull_mode(GPIO_NUM_13, GPIO_PULLUP_ONLY);   // D3, needed in 4- and 1-line modes
-
-
-    // Options for mounting the filesystem.
-    // If format_if_mount_failed is set to true, SD card will be partitioned and
-    // formatted in case when mounting fails.
+    // Mount configuration
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
         .format_if_mount_failed = false,
         .max_files = 10,
-        .allocation_unit_size = 16 * 1024
+        .allocation_unit_size = 16 * 1024,
+        .disk_status_check_enable = false,
+        .use_one_fat = false
     };
 
-    //https://docs.espressif.com/projects/esp-idf/en/v4.1/api-reference/peripherals/sdmmc_host.html
-
-
-    // Use settings defined above to initialize SD card and mount FAT filesystem.
-    // Note: esp_vfs_fat_sdmmc_mount is an all-in-one convenience function.
-    // Please check its source code and implement error recovery when developing
-    // production applications.
-    sdmmc_card_t* card;
+    // Mount SD card with FAT filesystem
+    sdmmc_card_t* card = NULL;
     esp_err_t ret = esp_vfs_fat_sdmmc_mount("/SDCARD", &host, &slot_config, &mount_config, &card);
 
     if (ret == ESP_OK) {
+        // Success - print card info
+        ESP_LOGI(TAG, "SD Card mounted successfully!");
+        ESP_LOGI(TAG, "  Name: %s", card->cid.name);
+        ESP_LOGI(TAG, "  Size: %lluMB", ((uint64_t)card->csd.capacity) * card->csd.sector_size / (1024 * 1024));
+
         mkdir("/SDCARD/APM", 0777);
         mkdir("/SDCARD/APM/LOGS", 0777);
-        printf("sdcard is mounted\n");
-        //update_fw();
+        printf("sdcard is mounted (4-bit SDMMC mode)\n");
         sdcard_running = true;
     } else {
+        // Failed - detailed error handling
+        ESP_LOGE(TAG, "SD card mount failed: %s (0x%x)", esp_err_to_name(ret), ret);
+
+        switch(ret) {
+            case ESP_ERR_INVALID_STATE:
+                ESP_LOGE(TAG, "Cause: Invalid state - filesystem may not be FAT32");
+                ESP_LOGE(TAG, "Solution: Format SD card as FAT32 (not exFAT/NTFS)");
+                break;
+            case ESP_FAIL:
+                ESP_LOGE(TAG, "Cause: No valid FAT partition found");
+                ESP_LOGE(TAG, "Solution: Format SD card as FAT32 with MBR partition");
+                break;
+            case ESP_ERR_TIMEOUT:
+                ESP_LOGE(TAG, "Cause: Card communication timeout");
+                ESP_LOGE(TAG, "Solution: Check card insertion and GPIO connections");
+                break;
+            case ESP_ERR_INVALID_RESPONSE:
+                ESP_LOGE(TAG, "Cause: Card returned invalid response");
+                ESP_LOGE(TAG, "Solution: Try a different SD card");
+                break;
+            case ESP_ERR_NO_MEM:
+                ESP_LOGE(TAG, "Cause: Not enough memory");
+                break;
+            default:
+                ESP_LOGE(TAG, "Check: Card inserted? FAT32 format? Card damaged?");
+                break;
+        }
+
         printf("sdcard is not mounted\n");
         sdcard_running = false;
     }

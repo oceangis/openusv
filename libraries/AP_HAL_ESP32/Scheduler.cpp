@@ -24,6 +24,7 @@
 #include "freertos/task.h"
 
 #include "esp_task_wdt.h"
+#include "esp_log.h"
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Scheduler/AP_Scheduler.h>
@@ -75,72 +76,76 @@ void Scheduler::wdt_init(uint32_t timeout, uint32_t core_mask)
 
 void Scheduler::init()
 {
+    printf("Scheduler::init() start\n");
+    fflush(stdout);
 
-#ifdef SCHEDDEBUG
-    printf("%s:%d \n", __PRETTY_FUNCTION__, __LINE__);
-#endif
-
-    hal.console->printf("%s:%d running with CONFIG_FREERTOS_HZ=%d\n", __PRETTY_FUNCTION__, __LINE__,CONFIG_FREERTOS_HZ);
+    printf("%s:%d running with CONFIG_FREERTOS_HZ=%d\n", __PRETTY_FUNCTION__, __LINE__,CONFIG_FREERTOS_HZ);
+    fflush(stdout);
 
     // keep main tasks that need speed on CPU 0
     // pin potentially slow stuff to CPU 1, as we have disabled the WDT on that core.
     #define FASTCPU 0
     #define SLOWCPU 1
 
-    // pin main thread to Core 0, and we'll also pin other heavy-tasks to core 1, like wifi-related.
+    printf("Creating APM_MAIN task...\n");
+    fflush(stdout);
     if (xTaskCreatePinnedToCore(_main_thread, "APM_MAIN", Scheduler::MAIN_SS, this, Scheduler::MAIN_PRIO, &_main_task_handle,FASTCPU) != pdPASS) {
-    //if (xTaskCreate(_main_thread, "APM_MAIN", Scheduler::MAIN_SS, this, Scheduler::MAIN_PRIO, &_main_task_handle) != pdPASS) {
-        hal.console->printf("FAILED to create task _main_thread on FASTCPU\n");
+        printf("FAILED to create APM_MAIN!\n");
     } else {
-    	hal.console->printf("OK created task _main_thread on FASTCPU\n");
+        printf("Created APM_MAIN\n");
     }
 
+    printf("Creating APM_TIMER task...\n");
     if (xTaskCreatePinnedToCore(_timer_thread, "APM_TIMER", TIMER_SS, this, TIMER_PRIO, &_timer_task_handle,FASTCPU) != pdPASS) {
-        hal.console->printf("FAILED to create task _timer_thread on FASTCPU\n");
+        printf("FAILED to create APM_TIMER!\n");
     } else {
-    	hal.console->printf("OK created task _timer_thread on FASTCPU\n");
-    }	
+        printf("Created APM_TIMER\n");
+    }
 
+    printf("Creating APM_RCOUT task...\n");
     if (xTaskCreatePinnedToCore(_rcout_thread, "APM_RCOUT", RCOUT_SS, this, RCOUT_PRIO, &_rcout_task_handle,SLOWCPU) != pdPASS) {
-       hal.console->printf("FAILED to create task _rcout_thread on SLOWCPU\n");
+        printf("FAILED to create APM_RCOUT!\n");
     } else {
-       hal.console->printf("OK created task _rcout_thread on SLOWCPU\n");
+        printf("Created APM_RCOUT\n");
     }
 
+    printf("Creating APM_RCIN task...\n");
     if (xTaskCreatePinnedToCore(_rcin_thread, "APM_RCIN", RCIN_SS, this, RCIN_PRIO, &_rcin_task_handle,SLOWCPU) != pdPASS) {
-       hal.console->printf("FAILED to create task _rcin_thread on SLOWCPU\n");
+        printf("FAILED to create APM_RCIN!\n");
     } else {
-       hal.console->printf("OK created task _rcin_thread on SLOWCPU\n");
+        printf("Created APM_RCIN\n");
     }
 
-    // pin this thread to Core 1 as it keeps all teh uart/s feed data, and we need that quick.
+    printf("Creating APM_UART task...\n");
     if (xTaskCreatePinnedToCore(_uart_thread, "APM_UART", UART_SS, this, UART_PRIO, &_uart_task_handle,FASTCPU) != pdPASS) {
-        hal.console->printf("FAILED to create task _uart_thread on FASTCPU\n");
+        printf("FAILED to create APM_UART!\n");
     } else {
-    	hal.console->printf("OK created task _uart_thread on FASTCPU\n");
-    }	  
+        printf("Created APM_UART\n");
+    }
 
-    // we put those on the SLOW core as it mounts the sd card, and that often isn't connected.
+    printf("Creating APM_IO task...\n");
     if (xTaskCreatePinnedToCore(_io_thread, "SchedulerIO:APM_IO", IO_SS, this, IO_PRIO, &_io_task_handle,SLOWCPU) != pdPASS) {
-        hal.console->printf("FAILED to create task _io_thread on SLOWCPU\n");
+        printf("FAILED to create APM_IO!\n");
     } else {
-        hal.console->printf("OK created task _io_thread on SLOWCPU\n");
-    }	 
-
-    if (xTaskCreatePinnedToCore(_storage_thread, "APM_STORAGE", STORAGE_SS, this, STORAGE_PRIO, &_storage_task_handle,SLOWCPU) != pdPASS) { //no actual flash writes without this, storage kinda appears to work, but does an erase on every boot and params don't persist over reset etc.
-        hal.console->printf("FAILED to create task _storage_thread on SLOWCPU\n");
-    } else {
-    	hal.console->printf("OK created task _storage_thread on SLOWCPU\n");
+        printf("Created APM_IO\n");
     }
 
-    // Create monitor thread for lockup detection (runs on SLOWCPU to avoid interfering with critical tasks)
+    printf("Creating APM_STORAGE task...\n");
+    if (xTaskCreatePinnedToCore(_storage_thread, "APM_STORAGE", STORAGE_SS, this, STORAGE_PRIO, &_storage_task_handle,SLOWCPU) != pdPASS) {
+        printf("FAILED to create APM_STORAGE!\n");
+    } else {
+        printf("Created APM_STORAGE\n");
+    }
+
+    printf("Creating APM_MONITOR task...\n");
     if (xTaskCreatePinnedToCore(_monitor_thread, "APM_MONITOR", MONITOR_SS, this, MONITOR_PRIO, &_monitor_task_handle,SLOWCPU) != pdPASS) {
-        hal.console->printf("FAILED to create task _monitor_thread on SLOWCPU\n");
+        printf("FAILED to create APM_MONITOR!\n");
     } else {
-        hal.console->printf("OK created task _monitor_thread on SLOWCPU\n");
+        printf("Created APM_MONITOR\n");
     }
 
-    //   xTaskCreatePinnedToCore(_print_profile, "APM_PROFILE", IO_SS, this, IO_PRIO, nullptr,SLOWCPU);
+    printf("Scheduler::init() done\n");
+    fflush(stdout);
 }
 
 template <typename T>
@@ -663,27 +668,39 @@ void Scheduler::print_main_loop_rate(void)
 
 void IRAM_ATTR Scheduler::_main_thread(void *arg)
 {
-#ifdef SCHEDDEBUG
-    printf("%s:%d start\n", __PRETTY_FUNCTION__, __LINE__);
-#endif
+    printf("_main_thread started\n");
+    fflush(stdout);
     Scheduler *sched = (Scheduler *)arg;
 
+    // CRITICAL FIX: Initialize watchdog BEFORE setup() to prevent "task not found" errors
+    // during long initialization sequences (e.g., gyro calibration ~8s)
+    // This ensures esp_task_wdt_reset() can be called during setup
+    printf("_main_thread: initializing watchdog (10s timeout)\n");
+    wdt_init(10000, 1 << FASTCPU); // 10 sec timeout during init (increased from 3s)
+    fflush(stdout);
+
 #if AP_HAL_ANALOGIN_ENABLED
+    printf("_main_thread: analogin->init()\n");
     hal.analogin->init();
 #endif
+    printf("_main_thread: rcout->init()\n");
     hal.rcout->init();
 
+    printf("_main_thread: callbacks->setup()\n");
+    fflush(stdout);
     sched->callbacks->setup();
+    printf("_main_thread: setup done\n");
+    fflush(stdout);
 
     sched->set_system_initialized();
 
-    //initialize WTD for current thread on FASTCPU, all cores will be (1 << CONFIG_FREERTOS_NUMBER_OF_CORES) - 1
-    wdt_init( TWDT_TIMEOUT_MS, 1 << FASTCPU ); // 3 sec
+    // Reduce watchdog timeout to normal 3s after initialization complete
+    printf("_main_thread: reducing watchdog timeout to 3s\n");
+    esp_task_wdt_deinit();
+    wdt_init(TWDT_TIMEOUT_MS, 1 << FASTCPU); // 3 sec for normal operation
 
-
-#ifdef SCHEDDEBUG
-    printf("%s:%d initialised\n", __PRETTY_FUNCTION__, __LINE__);
-#endif
+    printf("_main_thread: entering main loop\n");
+    fflush(stdout);
     while (true) {
         sched->callbacks->loop();
 
@@ -762,7 +779,10 @@ void IRAM_ATTR Scheduler::_monitor_thread(void *arg)
         // This prevents full system reset while we're trying to diagnose
         if (loop_delay > 1000) {
             // Main loop completely stuck, pat watchdog to prevent reset during diagnosis
-            esp_task_wdt_reset();
+            // Only do this if we're NOT in initialization phase (watchdog might not be initialized yet)
+            if (sched->_initialized) {
+                esp_task_wdt_reset();
+            }
         }
     }
 }

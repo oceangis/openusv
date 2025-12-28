@@ -2107,7 +2107,14 @@ AP_AHRS::EKFType AP_AHRS::_active_EKF_type(void) const
 
         // Handle fallback for the case where the DCM or EKF is unable to provide attitude or height data.
         const bool can_use_dcm = dcm.yaw_source_available() || fly_forward;
+        // For ExternalAHRS, only require attitude (no vert_vel/vert_pos for pure IMU sensors like BNO08x)
+#if AP_AHRS_EXTERNAL_ENABLED
+        const bool can_use_ekf = (ret == EKFType::EXTERNAL) ?
+                                 filt_state.flags.attitude :
+                                 (filt_state.flags.attitude && filt_state.flags.vert_vel && filt_state.flags.vert_pos);
+#else
         const bool can_use_ekf = filt_state.flags.attitude && filt_state.flags.vert_vel && filt_state.flags.vert_pos;
+#endif
         if (!can_use_dcm && can_use_ekf) {
             // no choice - continue to use EKF
             return ret;
@@ -2115,6 +2122,13 @@ AP_AHRS::EKFType AP_AHRS::_active_EKF_type(void) const
             // No choice - we have to use DCM
             return EKFType::DCM;
         }
+
+#if AP_AHRS_EXTERNAL_ENABLED
+        // ExternalAHRS (e.g., BNO08x) only provides attitude, skip GPS/position fallback checks
+        if (ret == EKFType::EXTERNAL) {
+            return ret;
+        }
+#endif
 
         const bool disable_dcm_fallback = fly_forward?
             option_set(Options::DISABLE_DCM_FALLBACK_FW) : option_set(Options::DISABLE_DCM_FALLBACK_VTOL);

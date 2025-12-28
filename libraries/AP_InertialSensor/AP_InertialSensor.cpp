@@ -1109,7 +1109,7 @@ bool AP_InertialSensor::register_accel(uint8_t &instance, uint16_t raw_sample_ra
 void AP_InertialSensor::_start_backends()
 
 {
-#if defined(HAL_ESP32_BOARD_NAME)
+#if 0 // DISABLED: I2C diagnostics causing delay - defined(HAL_ESP32_BOARD_NAME)
     // ICM-20948调试：扫描I2C总线
     static bool diagnostics_run = false;
     if (!diagnostics_run) {
