@@ -140,7 +140,9 @@ void Sailboat::init()
 {
     // sailboat defaults
     if (sail_enabled()) {
+#if AP_ROVER_CRASH_CHECK_ENABLED
         rover.g2.crash_angle.set_default(0);
+#endif
 
         // sailboats without motors may travel faster than WP_SPEED so allow waypoint navigation to
         // speedup to catch the vehicle instead of asking the vehicle to slow down

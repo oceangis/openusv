@@ -8,6 +8,7 @@ void Rover::update_compass(void)
     compass.read();
 }
 
+#if AP_WHEELENCODER_ENABLED
 // update wheel encoders
 void Rover::update_wheel_encoder()
 {
@@ -77,6 +78,7 @@ void Rover::update_wheel_encoder()
                         g2.wheel_encoder.get_wheel_radius(wheel_encoder_last_index_sent));
 #endif
 }
+#endif  // AP_WHEELENCODER_ENABLED
 
 #if AP_RANGEFINDER_ENABLED
 // read the rangefinders

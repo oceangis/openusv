@@ -111,11 +111,7 @@ void GCS_MAVLINK_Rover::send_nav_controller_output() const
     mavlink_msg_nav_controller_output_send(
         chan,
         0,  // roll
-#if AP_ROVER_BALANCEBOT_ENABLED
-        degrees(rover.g2.attitude_control.get_desired_pitch()),
-#else
-        0,  // No pitch control for non-balance bots
-#endif
+        0,  // pitch
         control_mode->nav_bearing(),
         control_mode->wp_bearing(),
         MIN(control_mode->get_distance_to_destination(), UINT16_MAX),
@@ -304,25 +300,8 @@ void GCS_MAVLINK_Rover::send_pid_tuning()
         }
     }
 
-#if AP_ROVER_BALANCEBOT_ENABLED
-    // pitch to throttle pid
-    if (g.gcs_pid_mask & 4) {
-        pid_info = &g2.attitude_control.get_pitch_to_throttle_pid().get_pid_info();
-        mavlink_msg_pid_tuning_send(chan, PID_TUNING_PITCH,
-                                    degrees(pid_info->target),
-                                    degrees(pid_info->actual),
-                                    pid_info->FF,
-                                    pid_info->P,
-                                    pid_info->I,
-                                    pid_info->D,
-                                    pid_info->slew_rate,
-                                    pid_info->Dmod);
-        if (!HAVE_PAYLOAD_SPACE(chan, PID_TUNING)) {
-            return;
-        }
-    }
-#endif
 
+#if AP_WHEELENCODER_ENABLED && AP_WHEELRATECONTROL_ENABLED
     // left wheel rate control pid
     if (g.gcs_pid_mask & 8) {
         pid_info = &g2.wheel_rate_control.get_pid(0).get_pid_info();
@@ -356,6 +335,7 @@ void GCS_MAVLINK_Rover::send_pid_tuning()
             return;
         }
     }
+#endif
 
     // sailboat heel to mainsail pid
     if (g.gcs_pid_mask & 32) {
@@ -409,6 +389,7 @@ void GCS_MAVLINK_Rover::send_pid_tuning()
     }
 }
 
+#if AP_WHEELENCODER_ENABLED
 void Rover::send_wheel_encoder_distance(const mavlink_channel_t chan)
 {
     // send wheel encoder data using wheel_distance message
@@ -420,6 +401,7 @@ void Rover::send_wheel_encoder_distance(const mavlink_channel_t chan)
         mavlink_msg_wheel_distance_send(chan, 1000UL * AP_HAL::millis(), g2.wheel_encoder.num_sensors(), distances);
     }
 }
+#endif
 
 bool GCS_Rover::vehicle_initialised() const
 {
@@ -436,10 +418,12 @@ bool GCS_MAVLINK_Rover::try_send_message(enum ap_message id)
         send_servo_out();
         break;
 
+#if AP_WHEELENCODER_ENABLED
     case MSG_WHEEL_DISTANCE:
         CHECK_PAYLOAD_SIZE(WHEEL_DISTANCE);
         rover.send_wheel_encoder_distance(chan);
         break;
+#endif
 
     case MSG_WIND:
         CHECK_PAYLOAD_SIZE(WIND);

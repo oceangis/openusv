@@ -89,7 +89,9 @@ const AP_Scheduler::Task Rover::scheduler_tasks[] = {
     SCHED_TASK_CLASS(AP_Proximity,        &rover.g2.proximity,     update,         50,  200,  27),
 #endif
     SCHED_TASK_CLASS(AP_WindVane,         &rover.g2.windvane,      update,         20,  100,  30),
+#if AP_WHEELENCODER_ENABLED
     SCHED_TASK(update_wheel_encoder,   50,    200,  36),
+#endif
     SCHED_TASK(update_compass,         10,    200,  39),
 #if HAL_LOGGING_ENABLED
     SCHED_TASK(update_logging1,        10,    200,  45),
@@ -134,7 +136,9 @@ const AP_Scheduler::Task Rover::scheduler_tasks[] = {
 #if HAL_BUTTON_ENABLED
     SCHED_TASK_CLASS(AP_Button,           &rover.button,           update,          5,  200, 117),
 #endif
+#if AP_ROVER_CRASH_CHECK_ENABLED
     SCHED_TASK(crash_check,            10,    200, 123),
+#endif
     SCHED_TASK(cruise_learn_update,    50,    200, 126),
 #if AP_ROVER_ADVANCED_FAILSAFE_ENABLED
     SCHED_TASK(afs_fs_check,           10,    200, 129),
@@ -419,7 +423,9 @@ void Rover::update_logging2(void)
 
     if (should_log(MASK_LOG_RC)) {
         Log_Write_RC();
+#if AP_WHEELENCODER_ENABLED
         g2.wheel_encoder.Log_Write();
+#endif
     }
 
     if (should_log(MASK_LOG_IMU)) {
@@ -512,7 +518,9 @@ void Rover::one_second_loop(void)
     // send latest param values to wp_nav
     g2.wp_nav.set_turn_params(g2.turn_radius, g2.motors.have_skid_steering());
     g2.pos_control.set_turn_params(g2.turn_radius, g2.motors.have_skid_steering());
+#if AP_WHEELENCODER_ENABLED && AP_WHEELRATECONTROL_ENABLED
     g2.wheel_rate_control.set_notch_sample_rate(AP::scheduler().get_filtered_loop_rate_hz());
+#endif
 
 #if AP_STATS_ENABLED
     // Update stats "flying" time

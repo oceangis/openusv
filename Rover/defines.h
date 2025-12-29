@@ -92,7 +92,6 @@ enum frame_class {
     FRAME_UNDEFINED = 0,
     FRAME_ROVER = 1,
     FRAME_BOAT = 2,
-    FRAME_BALANCEBOT = 3,
 };
 
 // manual mode options

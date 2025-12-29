@@ -304,7 +304,7 @@ public:
     AP_Beacon beacon;
 #endif
 
-    // wheel encoders
+    // wheel encoders (kept for AP_MotorsUGV dependency, parameters disabled via AP_WHEELENCODER_ENABLED)
     AP_WheelEncoder wheel_encoder;
     AP_WheelRateControl wheel_rate_control;
 
@@ -344,13 +344,11 @@ public:
     AC_Avoid avoid;
 #endif
 
-#if AP_ROVER_BALANCEBOT_ENABLED
-    // pitch angle at 100% throttle
-    AP_Float bal_pitch_max;
-#endif
 
+#if AP_ROVER_CRASH_CHECK_ENABLED
     // pitch/roll angle for crash check
     AP_Int8 crash_angle;
+#endif
 
 #if AP_FOLLOW_ENABLED
     // follow mode library
@@ -387,10 +385,6 @@ public:
     AP_Enum<ModeAuto::DoneBehaviour> mis_done_behave;
 #endif
 
-#if AP_ROVER_BALANCEBOT_ENABLED
-    // balance both pitch trim
-    AP_Float bal_pitch_trim;
-#endif
 
     // stick mixing for auto modes
     AP_Int8     stick_mixing;

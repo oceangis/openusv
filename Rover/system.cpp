@@ -71,8 +71,10 @@ void Rover::init_ardupilot()
     g2.motors.init(get_frame_type());        // init motors including setting servo out channels ranges
     AP::srv().enable_aux_servos();
 
+#if AP_WHEELENCODER_ENABLED
     // init wheel encoders
     g2.wheel_encoder.init();
+#endif
 
 #if HAL_TORQEEDO_ENABLED
     // init torqeedo motor driver

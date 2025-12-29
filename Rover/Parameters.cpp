@@ -380,9 +380,11 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Path: ../libraries/AR_Motors/AP_MotorsUGV.cpp
     AP_SUBGROUPINFO(motors, "MOT_", 8, ParametersG2, AP_MotorsUGV),
 
+#if AP_WHEELENCODER_ENABLED
     // @Group: WENC
     // @Path: ../libraries/AP_WheelEncoder/AP_WheelEncoder.cpp
     AP_SUBGROUPINFO(wheel_encoder, "WENC", 9, ParametersG2, AP_WheelEncoder),
+#endif
 
     // @Group: ATC
     // @Path: ../libraries/APM_Control/AR_AttitudeControl.cpp
@@ -442,17 +444,8 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
 
     // 20 was PIVOT_TURN_RATE and should not be re-used
 
-#if AP_ROVER_BALANCEBOT_ENABLED
-    // @Param: BAL_PITCH_MAX
-    // @DisplayName: BalanceBot Maximum Pitch
-    // @Description: Pitch angle in degrees at 100% throttle
-    // @Units: deg
-    // @Range: 0 15
-    // @Increment: 0.1
-    // @User: Standard
-    AP_GROUPINFO("BAL_PITCH_MAX", 21, ParametersG2, bal_pitch_max, 10),
-#endif
 
+#if AP_ROVER_CRASH_CHECK_ENABLED
     // @Param: CRASH_ANGLE
     // @DisplayName: Crash Angle
     // @Description: Pitch/Roll angle limit in degrees for crash check. Zero disables check
@@ -461,6 +454,7 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("CRASH_ANGLE", 22, ParametersG2, crash_angle, 0),
+#endif
 
 #if AP_FOLLOW_ENABLED
     // @Group: FOLL
@@ -489,9 +483,11 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     AP_SUBGROUPINFO(sprayer, "SPRAY_", 26, ParametersG2, AC_Sprayer),
 #endif
 
+#if AP_WHEELENCODER_ENABLED && AP_WHEELRATECONTROL_ENABLED
     // @Group: WRC
     // @Path: ../libraries/AP_WheelEncoder/AP_WheelRateControl.cpp
     AP_SUBGROUPINFO(wheel_rate_control, "WRC", 27, ParametersG2, AP_WheelRateControl),
+#endif
 
 #if HAL_RALLY_ENABLED
     // @Group: RALLY_
@@ -535,16 +531,6 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
 
     // 39 was AP_Gripper
 
-#if AP_ROVER_BALANCEBOT_ENABLED
-    // @Param: BAL_PITCH_TRIM
-    // @DisplayName: Balance Bot pitch trim angle
-    // @Description: Balance Bot pitch trim for balancing. This offsets the tilt of the center of mass.
-    // @Units: deg
-    // @Range: -2 2
-    // @Increment: 0.1
-    // @User: Standard
-    AP_GROUPINFO("BAL_PITCH_TRIM", 40, ParametersG2, bal_pitch_trim, 0),
-#endif
 
     // 41 was Scripting
 
@@ -800,10 +786,6 @@ void Rover::load_parameters(void)
 
     SRV_Channels::set_default_function(CH_1, SRV_Channel::k_steering);
     SRV_Channels::set_default_function(CH_3, SRV_Channel::k_throttle);
-
-    if (is_balancebot()) {
-        g2.crash_angle.set_default(30);
-    }
 
     SRV_Channels::upgrade_parameters();
 

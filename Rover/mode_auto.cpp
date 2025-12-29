@@ -803,7 +803,7 @@ void ModeAuto::do_nav_delay(const AP_Mission::Mission_Command& cmd)
 {
     nav_delay_time_start_ms = millis();
 
-    // boats loiter, cars and balancebots stop
+    // boats loiter, cars stop
     if (rover.is_boat()) {
         if (!start_loiter()) {
             start_stop();

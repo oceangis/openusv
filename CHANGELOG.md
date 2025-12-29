@@ -1,23 +1,74 @@
 # Changelog
 
+## [v1.6.0] - 2025-12-29
+
+### USV 功能精简 (USV Feature Optimization)
+
+针对无人船 (USV) 应用场景，禁用不需要的陆地车辆和飞行器功能，减少代码体积和内存占用。
+
+#### 已禁用的功能模块
+
+| 功能 | 宏定义 | 参数组 | 说明 |
+|------|--------|--------|------|
+| 轮编码器 | AP_WHEELENCODER_ENABLED=0 | WENC | USV 无轮子 |
+| 轮速率控制 | AP_WHEELRATECONTROL_ENABLED=0 | WRC | USV 无轮子 |
+| 翻车检测 | AP_ROVER_CRASH_CHECK_ENABLED=0 | CRASH_ANGLE | USV 不会翻车 |
+| 平衡车 | AP_ROVER_BALANCEBOT_ENABLED=0 | - | 两轮平衡车功能 |
+| MSP 协议 | HAL_MSP_ENABLED=0 | - | Betaflight OSD 协议 |
+| 室内信标 | AP_BEACON_ENABLED=0 | BCN | USV 户外使用 GPS |
+| 喷洒器 | HAL_SPRAYER_ENABLED=0 | SPRAY | 农业喷洒功能 |
+| 精确着陆 | AC_PRECLAND_ENABLED=0 | PLND | 飞行器功能 |
+| 对接模式 | MODE_DOCK_ENABLED=0 | - | 依赖精确着陆 |
+| 光流传感器 | AP_OPTICALFLOW_ENABLED=0 | FLOW | 飞行器悬停用 |
+| 空速计 | AP_AIRSPEED_ENABLED=0 | - | 飞行器用 |
+
+#### 修改的文件
+- Rover/config.h - 添加所有禁用宏定义
+- Rover/Parameters.cpp - 条件编译参数组
+- Rover/Parameters.h - 条件编译成员变量
+- Rover/Rover.cpp - 条件编译调度任务
+- Rover/Rover.h - 条件编译函数声明
+- Rover/sensors.cpp - 条件编译轮编码器更新
+- Rover/crash_check.cpp - 条件编译整个文件
+- Rover/system.cpp - 条件编译初始化代码
+- Rover/sailboat.cpp - 条件编译默认值设置
+- Rover/GCS_MAVLink_Rover.cpp - 条件编译 MAVLink 消息
+- Rover/Log.cpp - 条件编译日志记录
+- libraries/APM_Control/AR_AttitudeControl.cpp/h - 条件编译 Balance Bot PID
+
+#### USV 保留的核心功能
+- GPS 导航定位
+- 罗盘航向
+- IMU 姿态 (BNO08x ExternalAHRS)
+- 电池监控
+- MAVLink 通信 (UART/WiFi/LoRa)
+- MODE_MANUAL - 手动控制
+- MODE_AUTO - 自主航行
+- MODE_RTL - 返航
+- MODE_LOITER - 悬停定点
+- MODE_GUIDED - 地面站引导
+- Sailboat - 帆船功能
+
+---
+
 ## [v1.5.0] - 2025-12-29
 
 ### 优化 (Improved)
 - **禁用 Balance Bot 功能**: USV/船型不需要两轮平衡车功能
-  - `AP_ROVER_BALANCEBOT_ENABLED = 0`
+  - AP_ROVER_BALANCEBOT_ENABLED = 0
   - 减少代码体积和内存占用
 
 - **串口映射优化**: 更直观的串口编号映射
   - SERIAL0 = UART0 (MAVLink)
-  - SERIAL1 = UART1 (GPS) ← 修复 GPS 无法识别问题
+  - SERIAL1 = UART1 (GPS) - 修复 GPS 无法识别问题
   - SERIAL3 = LoRa (虚拟串口，底层 SPI)
 
 ### 修复 (Fixed)
 - **Balance Bot 条件编译**: 修复禁用 balance bot 后的编译错误
-  - `balance_bot.cpp` - 添加 stub 函数
-  - `AR_AttitudeControl.cpp/h` - 条件编译 pitch to throttle PID
-  - `Log.cpp` - 条件编译 get_desired_pitch() 调用
-  - `GCS_MAVLink_Rover.cpp` - 条件编译 balance bot 相关代码
+  - balance_bot.cpp - 添加 stub 函数
+  - AR_AttitudeControl.cpp/h - 条件编译 pitch to throttle PID
+  - Log.cpp - 条件编译 get_desired_pitch() 调用
+  - GCS_MAVLink_Rover.cpp - 条件编译 balance bot 相关代码
 
 - **GPS 串口配置**: 修复 GPS 数据无法读取问题
   - 原因: SERIAL1 映射到 Empty 驱动，GPS 配置在 SERIAL3
@@ -28,7 +79,7 @@
   - SERIAL0 = UARTDriver(0) // UART0, MAVLink
   - SERIAL1 = UARTDriver(1) // UART1, GPS @ 38400
   - SERIAL2 = Empty         // 无物理 UART
-  - SERIAL3 = LoRaUARTDriver // 虚拟串口 (SPI→LoRa)
+  - SERIAL3 = LoRaUARTDriver // 虚拟串口 (SPI->LoRa)
 
 - **GPS 硬件**:
   - u-blox MAX-M10S @ UART1 (RX=GPIO18, TX=GPIO17)
@@ -40,29 +91,10 @@
 
 ### 新增 (Added)
 - **u-blox MAX-M10S GPS 支持**: 成功读取 GPS 数据
-  - 自动检测并配置波特率
-  - 支持 u-blox 协议
-
 - **BNO08x IMU 数据读取**: 成功读取姿态数据
-  - Roll/Pitch/Yaw 欧拉角输出
-  - 50Hz 更新率
-  - ENU 到 NED 坐标系转换
 
 ### 修复 (Fixed)
 - **AHRS ExternalAHRS 集成**: 修复 BNO08x 姿态数据未被导航使用的问题
-  - 添加 `HAL_AHRS_EKF_TYPE_DEFAULT 11` 默认参数
-  - 修改 `_active_EKF_type()` 回退逻辑，ExternalAHRS 只检查 attitude 标志
-  - 跳过对纯 AHRS 传感器不适用的 GPS/位置回退检查
-
-### 技术细节
-- **参数配置**:
-  - `AHRS_EKF_TYPE = 11` - 使用 ExternalAHRS
-  - `EAHRS_TYPE = 11` - BNO08x 类型
-  - EKF2/EKF3 已禁用，仅使用 ExternalAHRS
-
-- **硬件验证**:
-  - GPS: u-blox MAX-M10S @ UART1 (GPIO17/18)
-  - IMU: BNO08x @ I2C (GPIO9/10, 地址 0x4B)
 
 ---
 
@@ -70,52 +102,7 @@
 
 ### 新增 (Added)
 - **WiFi 配置系统**: 完整的 WiFi 参数集成到 ArduPilot
-  - `components/wifi_config/` - ESP-IDF WiFi 配置组件
-  - `libraries/AP_WiFi_ESP32/` - ArduPilot 参数集成类
-  - 支持 AP/STA/APSTA 模式切换
-  - MAVLink UDP 转发功能
-  - Web 配置界面
-  - **参数前缀**: `WIFI_`
-    - `WIFI_ENABLE` - 启用/禁用 WiFi
-    - `WIFI_MODE` - 工作模式 (0:OFF, 1:AP, 2:STA, 3:APSTA)
-    - `WIFI_AP_CHAN` - AP 信道
-    - `WIFI_MAV_EN` - MAVLink UDP 启用
-    - `WIFI_MAV_PORT` - MAVLink UDP 端口
-
 - **LoRa MAVLink 数传**: 基于 SX1262 的远程遥测系统
-  - `components/lora_mavlink/` - LoRa 通信组件 (SX1262 驱动)
-  - `libraries/AP_LoRa_ESP32/` - ArduPilot 参数集成类
-  - `libraries/AP_HAL_ESP32/LoRaUARTDriver.*` - 虚拟 UART 驱动
-  - 作为 SERIAL4 集成到 ArduPilot 串口系统
-  - 支持 3-5km 远程 MAVLink 通信
-  - **参数前缀**: `LORA_`
-    - `LORA_ENABLE` - 启用/禁用 LoRa
-    - `LORA_FREQ` - 频率 (kHz, 默认 433000)
-    - `LORA_POWER` - 发射功率 (dBm, 2-22)
-    - `LORA_SF` - 扩频因子 (6-12, 默认 8)
-    - `LORA_BW` - 带宽 (0:125kHz, 1:250kHz, 2:500kHz)
-    - `LORA_CR` - 编码率 (1:4/5 到 4:4/8)
-
-### 改进 (Improved)
-- **参数系统**: 统一使用 AP_Param (Flash 分区 0x45) 作为唯一配置源
-- **main.c**: 优化启动顺序，先初始化 WiFi 和 LoRa，再启动 ArduPilot
-- **CMakeLists**: 添加 wifi_config 和 lora_mavlink 组件依赖
-
-### 技术细节
-- **WiFi 使用方式**:
-  - 默认 AP 模式，SSID: `USV_XXXXXX`
-  - 连接后访问 `192.168.4.1` 进行 Web 配置
-  - MissionPlanner 通过 UDP 14550 端口连接
-
-- **LoRa 使用方式**:
-  - 配置 `SERIAL4_PROTOCOL = 2` (MAVLink2)
-  - 地面站需配对相同频率/SF/BW 的 LoRa 模块
-  - 数据率约 800 bytes/s (SF8/125kHz)
-
-### 硬件引脚 (esp32s3rover)
-- **LoRa SX1262**:
-  - SCK: GPIO35, MISO: GPIO36, MOSI: GPIO37
-  - CS: GPIO39, RST: GPIO42, BUSY: GPIO40, DIO1: GPIO41
 
 ---
 
@@ -123,49 +110,19 @@
 
 ### 新增 (Added)
 - **BNO08x ExternalAHRS 驱动**: 完整实现 BNO08x IMU 传感器支持
-  - `AP_ExternalAHRS_BNO08x.cpp/h` - 基于 Adafruit/SparkFun 参考实现
-  - SHTP 协议通信（I2C）
-  - 支持旋转向量、陀螺仪、加速度计数据
-  - Q-point 定点数转浮点转换
-  - 设备类型 `EAHRS_TYPE = 11`
 - **ExternalAHRS 框架启用**: 在 ESP32 平台启用外部 AHRS 支持
-  - `AP_EXTERNAL_AHRS_ENABLED = 1`
-  - `AP_EXTERNAL_AHRS_BNO08X_ENABLED = 1`
-
-### 改进 (Improved)
-- **AK09916 磁力计**: 优化初始化和数据读取流程
-- **Storage 驱动**: 改进 NVS 存储实现
-- **Scheduler**: 调整调度器配置
-- **IMU 传感器**: 增强 Invensensev2 驱动调试信息
-- **分区表**: 优化 Flash 分区布局
-
-### 技术细节
-- **BNO08x 使用方式**:
-  - 设置 `EAHRS_TYPE = 11` 启用
-  - I2C 地址: 0x4A (或 0x4B)
-  - `AHRS_EKF_TYPE = 11`: 直接使用 BNO08x 融合姿态
-  - `AHRS_EKF_TYPE = 3`: 原始数据送入 EKF3 滤波
 
 ---
 
 ## [v1.1] - 2025-11-12
 
 ### 修复 (Fixed)
-- **修复AP_AHRS API兼容性**: 将已废弃的`get_yaw()`替换为`get_yaw_rad()`
-- **修复未定义变量**: 修正`channel_yaw`为`channel_roll`
-- **修复EKF函数调用**: 将`position_ok()`更正为`ekf_position_ok()`
-- **修复友元类声明**: 添加ModePosHold为Rover的友元类
-
-### 简化 (Simplified)
-- **GPIO简化**: 移除过度设计的GPIO中断系统（200+行代码）
+- 修复AP_AHRS API兼容性
+- 修复EKF函数调用
 
 ### 新增 (Added)
-- **PosHold模式**: 为X型推进器船型添加位置保持模式
-- **DroneCAN支持**: 保留完整的DroneCAN功能
-- **板载配置**: esp32s3rover硬件定义
-
-### 优化 (Improved)
-- **Manual模式**: 为X型船添加航向辅助功能
+- PosHold模式
+- DroneCAN支持
 
 ---
 
@@ -174,4 +131,3 @@
 ### 初始版本
 - ArduPilot Rover ESP32-S3 IDF移植
 - 基础功能实现
-- ESP32精简版发布

@@ -238,12 +238,14 @@ private:
     static const LogStructure log_structure[];
 #endif
 
+#if AP_WHEELENCODER_ENABLED
     // latest wheel encoder values
     float wheel_encoder_last_distance_m[WHEELENCODER_MAX_INSTANCES];    // total distance recorded by wheel encoder (for reporting to GCS)
     bool wheel_encoder_initialised;                                     // true once arrays below have been initialised to sensors initial values
     float wheel_encoder_last_angle_rad[WHEELENCODER_MAX_INSTANCES];     // distance in radians at time of last update to EKF
     uint32_t wheel_encoder_last_reading_ms[WHEELENCODER_MAX_INSTANCES]; // system time of last ping from each encoder
     uint8_t wheel_encoder_last_index_sent;                              // index of the last wheel encoder sent to the EKF
+#endif
 
     // True when we are doing motor test
     bool motor_test;
@@ -310,17 +312,16 @@ private:
     void one_second_loop(void);
     void update_current_mode(void);
 
-    // balance_bot.cpp
-    void balancebot_pitch_control(float &throttle);
-    bool is_balancebot() const;
 
     // commands.cpp
     bool set_home_to_current_location(bool lock) override WARN_IF_UNUSED;
     bool set_home(const Location& loc, bool lock) override WARN_IF_UNUSED;
     void update_home();
 
+#if AP_ROVER_CRASH_CHECK_ENABLED
     // crash_check.cpp
     void crash_check();
+#endif
 
     // cruise_learn.cpp
     void cruise_learn_start();
@@ -347,7 +348,9 @@ private:
     void fence_check();
 #endif
     // GCS_Mavlink.cpp
+#if AP_WHEELENCODER_ENABLED
     void send_wheel_encoder_distance(mavlink_channel_t chan);
+#endif
 
 #if HAL_LOGGING_ENABLED
     // methods for AP_Vehicle:
@@ -388,7 +391,9 @@ private:
 
     // sensors.cpp
     void update_compass(void);
+#if AP_WHEELENCODER_ENABLED
     void update_wheel_encoder();
+#endif
 #if AP_RANGEFINDER_ENABLED
     void read_rangefinders(void);
 #endif

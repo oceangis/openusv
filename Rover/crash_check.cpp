@@ -1,5 +1,7 @@
 #include "Rover.h"
 
+#if AP_ROVER_CRASH_CHECK_ENABLED
+
 // Code to detect a crash or block
 static const uint16_t CRASH_CHECK_TRIGGER_SEC = 2;   // 2 seconds blocked indicates a crash
 static const float CRASH_CHECK_THROTTLE_MIN = 5.0f;  // vehicle must have a throttle greater that 5% to be considered crashed
@@ -13,8 +15,8 @@ void Rover::crash_check()
     static uint16_t crash_counter;  // number of iterations vehicle may have been crashed
     bool crashed = false; //stores crash state
 
-    // return immediately if disarmed, crash checking is disabled or vehicle is Hold, Manual or Acro mode(if it is not a balance bot)
-    if (!arming.is_armed() || g.fs_crash_check == FS_CRASH_DISABLE || ((!control_mode->is_autopilot_mode()) && (!is_balancebot()))) {
+    // return immediately if disarmed, crash checking is disabled or vehicle is Hold, Manual or Acro mode
+    if (!arming.is_armed() || g.fs_crash_check == FS_CRASH_DISABLE || !control_mode->is_autopilot_mode()) {
         crash_counter = 0;
         return;
     }
@@ -27,39 +29,32 @@ void Rover::crash_check()
     // TODO : Check if min vel can be calculated
     // min_vel = ( CRASH_CHECK_THROTTLE_MIN * g.speed_cruise) / g.throttle_cruise;
 
-    if (!is_balancebot()) {
-        if (!crashed && ((ahrs.groundspeed() >= CRASH_CHECK_VEL_MIN) ||        // Check velocity
-            (fabsf(ahrs.get_gyro().z) >= CRASH_CHECK_VEL_MIN) ||  // Check turn speed
-            (fabsf(g2.motors.get_throttle()) < CRASH_CHECK_THROTTLE_MIN))) {
-            crash_counter = 0;
-            return;
-        }
+    if (!crashed && ((ahrs.groundspeed() >= CRASH_CHECK_VEL_MIN) ||        // Check velocity
+        (fabsf(ahrs.get_gyro().z) >= CRASH_CHECK_VEL_MIN) ||  // Check turn speed
+        (fabsf(g2.motors.get_throttle()) < CRASH_CHECK_THROTTLE_MIN))) {
+        crash_counter = 0;
+        return;
+    }
 
-        // we may be crashing
-        crash_counter++;
+    // we may be crashing
+    crash_counter++;
 
-        // check if crashing for 2 seconds
-        if (crash_counter >= (CRASH_CHECK_TRIGGER_SEC * 10)) {
-            crashed = true;
-        }
+    // check if crashing for 2 seconds
+    if (crash_counter >= (CRASH_CHECK_TRIGGER_SEC * 10)) {
+        crashed = true;
     }
 
     if (crashed) {
         LOGGER_WRITE_ERROR(LogErrorSubsystem::CRASH_CHECK,
                            LogErrorCode::CRASH_CHECK_CRASH);
 
-        if (is_balancebot()) {
-            // send message to gcs
-            GCS_SEND_TEXT(MAV_SEVERITY_EMERGENCY, "Crash: Disarming");
+        // send message to gcs
+        GCS_SEND_TEXT(MAV_SEVERITY_EMERGENCY, "Crash: Going to HOLD");
+        // change mode to hold and disarm
+        set_mode(mode_hold, ModeReason::CRASH_FAILSAFE);
+        if (g.fs_crash_check == FS_CRASH_HOLD_AND_DISARM) {
             arming.disarm(AP_Arming::Method::CRASH);
-        } else {
-            // send message to gcs
-            GCS_SEND_TEXT(MAV_SEVERITY_EMERGENCY, "Crash: Going to HOLD");
-            // change mode to hold and disarm
-            set_mode(mode_hold, ModeReason::CRASH_FAILSAFE);
-            if (g.fs_crash_check == FS_CRASH_HOLD_AND_DISARM) {
-                arming.disarm(AP_Arming::Method::CRASH);
-            }
         }
     }
 }
+#endif  // AP_ROVER_CRASH_CHECK_ENABLED
