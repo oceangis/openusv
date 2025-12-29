@@ -111,7 +111,11 @@ void GCS_MAVLINK_Rover::send_nav_controller_output() const
     mavlink_msg_nav_controller_output_send(
         chan,
         0,  // roll
+#if AP_ROVER_BALANCEBOT_ENABLED
         degrees(rover.g2.attitude_control.get_desired_pitch()),
+#else
+        0,  // No pitch control for non-balance bots
+#endif
         control_mode->nav_bearing(),
         control_mode->wp_bearing(),
         MIN(control_mode->get_distance_to_destination(), UINT16_MAX),
@@ -300,6 +304,7 @@ void GCS_MAVLINK_Rover::send_pid_tuning()
         }
     }
 
+#if AP_ROVER_BALANCEBOT_ENABLED
     // pitch to throttle pid
     if (g.gcs_pid_mask & 4) {
         pid_info = &g2.attitude_control.get_pitch_to_throttle_pid().get_pid_info();
@@ -316,6 +321,7 @@ void GCS_MAVLINK_Rover::send_pid_tuning()
             return;
         }
     }
+#endif
 
     // left wheel rate control pid
     if (g.gcs_pid_mask & 8) {
@@ -1027,18 +1033,28 @@ uint8_t GCS_MAVLINK_Rover::send_available_mode(uint8_t index) const
 {
     const Mode* modes[] {
         &rover.mode_manual,
+#if MODE_ACRO_ENABLED
         &rover.mode_acro,
+#endif
+#if MODE_STEERING_ENABLED
         &rover.mode_steering,
+#endif
         &rover.mode_hold,
         &rover.mode_loiter,
 #if MODE_FOLLOW_ENABLED
         &rover.mode_follow,
 #endif
+#if MODE_SIMPLE_ENABLED
         &rover.mode_simple,
+#endif
+#if MODE_CIRCLE_ENABLED
         &rover.g2.mode_circle,
+#endif
         &rover.mode_auto,
         &rover.mode_rtl,
+#if MODE_SMARTRTL_ENABLED
         &rover.mode_smartrtl,
+#endif
         &rover.mode_guided,
         &rover.mode_initializing,
 #if MODE_DOCK_ENABLED

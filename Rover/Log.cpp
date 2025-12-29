@@ -7,7 +7,11 @@
 // Write an attitude packet
 void Rover::Log_Write_Attitude()
 {
+#if AP_ROVER_BALANCEBOT_ENABLED
     float desired_pitch = degrees(g2.attitude_control.get_desired_pitch());
+#else
+    float desired_pitch = 0.0f;  // No pitch control target for non-balance bots
+#endif
     const Vector3f targets(0.0f, desired_pitch, 0.0f);
 
     ahrs.Write_Attitude(targets);
@@ -18,10 +22,12 @@ void Rover::Log_Write_Attitude()
     logger.Write_PID(LOG_PIDS_MSG, g2.attitude_control.get_steering_rate_pid().get_pid_info());
     logger.Write_PID(LOG_PIDA_MSG, g2.attitude_control.get_throttle_speed_pid_info());
 
+#if AP_ROVER_BALANCEBOT_ENABLED
     // log pitch control for balance bots
     if (is_balancebot()) {
         logger.Write_PID(LOG_PIDP_MSG, g2.attitude_control.get_pitch_to_throttle_pid().get_pid_info());
     }
+#endif
 
     // log heel to sail control for sailboats
     if (g2.sailboat.sail_enabled()) {

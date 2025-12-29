@@ -39,20 +39,13 @@
 #endif
 
 static ESP32::UARTDriver cons(0);
-#ifdef HAL_ESP32_WIFI
-#if HAL_ESP32_WIFI == 1
-static ESP32::WiFiDriver serial1Driver; //tcp, client should connect to 192.168.4.1 port 5760
-#elif HAL_ESP32_WIFI == 2
-static ESP32::WiFiUdpDriver serial1Driver; //udp
-#else
-static Empty::UARTDriver serial1Driver;
-#endif
-#else
-static Empty::UARTDriver serial1Driver;
-#endif
-static ESP32::UARTDriver serial2Driver(2);
-static ESP32::UARTDriver serial3Driver(1);
-static ESP32::LoRaUARTDriver serial4Driver;  // LoRa MAVLink telemetry
+// SERIAL1 = UART1 (GPS)
+static ESP32::UARTDriver serial1Driver(1);
+// SERIAL2 = Empty (only 2 UARTs available)
+static Empty::UARTDriver serial2Driver;
+// SERIAL3 = LoRa MAVLink telemetry
+static ESP32::LoRaUARTDriver serial3Driver;
+static Empty::UARTDriver serial4Driver;
 static Empty::UARTDriver serial5Driver;
 static Empty::UARTDriver serial6Driver;
 static Empty::UARTDriver serial7Driver;

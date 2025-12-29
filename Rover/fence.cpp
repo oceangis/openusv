@@ -50,9 +50,11 @@ void Rover::fence_check()
                 case FailsafeAction::None:
                     break;
                 case FailsafeAction::SmartRTL:
+#if MODE_SMARTRTL_ENABLED
                     if (set_mode(mode_smartrtl, ModeReason::FENCE_BREACHED)) {
                         break;
                     }
+#endif
                     FALLTHROUGH;
                 case FailsafeAction::RTL:
                     if (set_mode(mode_rtl, ModeReason::FENCE_BREACHED)) {
@@ -63,9 +65,13 @@ void Rover::fence_check()
                     set_mode(mode_hold, ModeReason::FENCE_BREACHED);
                     break;
                 case FailsafeAction::SmartRTL_Hold:
+#if MODE_SMARTRTL_ENABLED
                     if (!set_mode(mode_smartrtl, ModeReason::FENCE_BREACHED)) {
                         set_mode(mode_hold, ModeReason::FENCE_BREACHED);
                     }
+#else
+                    set_mode(mode_hold, ModeReason::FENCE_BREACHED);
+#endif
                     break;
                 case FailsafeAction::Loiter_Hold:
                     if (!set_mode(mode_loiter, ModeReason::FENCE_BREACHED)) {

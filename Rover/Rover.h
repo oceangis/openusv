@@ -89,24 +89,36 @@ public:
 #endif
     friend class GCS_Rover;
     friend class Mode;
+#if MODE_ACRO_ENABLED
     friend class ModeAcro;
+#endif
     friend class ModeAuto;
+#if MODE_CIRCLE_ENABLED
     friend class ModeCircle;
+#endif
     friend class ModeGuided;
     friend class ModeHold;
     friend class ModeLoiter;
+#if MODE_STEERING_ENABLED
     friend class ModeSteering;
+#endif
     friend class ModeManual;
     friend class ModeRTL;
+#if MODE_SMARTRTL_ENABLED
     friend class ModeSmartRTL;
+#endif
 #if MODE_FOLLOW_ENABLED
     friend class ModeFollow;
 #endif
+#if MODE_SIMPLE_ENABLED
     friend class ModeSimple;
+#endif
 #if MODE_DOCK_ENABLED
     friend class ModeDock;
 #endif
+#if MODE_POSHOLD_ENABLED
     friend class ModePosHold;
+#endif
 
     friend class RC_Channel_Rover;
     friend class RC_Channels_Rover;
@@ -239,18 +251,28 @@ private:
     ModeInitializing mode_initializing;
     ModeHold mode_hold;
     ModeManual mode_manual;
+#if MODE_ACRO_ENABLED
     ModeAcro mode_acro;
+#endif
     ModeGuided mode_guided;
     ModeAuto mode_auto;
     ModeLoiter mode_loiter;
+#if MODE_POSHOLD_ENABLED
     ModePosHold mode_poshold;
+#endif
+#if MODE_STEERING_ENABLED
     ModeSteering mode_steering;
+#endif
     ModeRTL mode_rtl;
+#if MODE_SMARTRTL_ENABLED
     ModeSmartRTL mode_smartrtl;
+#endif
 #if MODE_FOLLOW_ENABLED
     ModeFollow mode_follow;
 #endif
+#if MODE_SIMPLE_ENABLED
     ModeSimple mode_simple;
+#endif
 #if MODE_DOCK_ENABLED
     ModeDock mode_dock;
 #endif

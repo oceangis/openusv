@@ -201,9 +201,14 @@ const AP_Param::Info Rover::var_info[] = {
     // @Path: ../libraries/AP_Scheduler/AP_Scheduler.cpp
     GOBJECT(scheduler, "SCHED_", AP_Scheduler),
 
+
+#if AP_BARO_ENABLED
     // @Group: BARO
     // @Path: ../libraries/AP_Baro/AP_Baro.cpp
     GOBJECT(barometer, "BARO", AP_Baro),
+#endif
+
+
 
 #if AP_RELAY_ENABLED
     // @Group: RELAY
@@ -437,6 +442,7 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
 
     // 20 was PIVOT_TURN_RATE and should not be re-used
 
+#if AP_ROVER_BALANCEBOT_ENABLED
     // @Param: BAL_PITCH_MAX
     // @DisplayName: BalanceBot Maximum Pitch
     // @Description: Pitch angle in degrees at 100% throttle
@@ -445,6 +451,7 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Increment: 0.1
     // @User: Standard
     AP_GROUPINFO("BAL_PITCH_MAX", 21, ParametersG2, bal_pitch_max, 10),
+#endif
 
     // @Param: CRASH_ANGLE
     // @DisplayName: Crash Angle
@@ -495,10 +502,12 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Param: SIMPLE_TYPE
     // @DisplayName: Simple_Type
     // @Description: Simple mode types
+#if MODE_SIMPLE_ENABLED
     // @Values: 0:InitialHeading,1:CardinalDirections
     // @User: Standard
     // @RebootRequired: True
     AP_GROUPINFO("SIMPLE_TYPE", 29, ParametersG2, simple_type, 0),
+#endif
 
     // @Param: LOIT_RADIUS
     // @DisplayName: Loiter radius
@@ -526,6 +535,7 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
 
     // 39 was AP_Gripper
 
+#if AP_ROVER_BALANCEBOT_ENABLED
     // @Param: BAL_PITCH_TRIM
     // @DisplayName: Balance Bot pitch trim angle
     // @Description: Balance Bot pitch trim for balancing. This offsets the tilt of the center of mass.
@@ -534,6 +544,7 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Increment: 0.1
     // @User: Standard
     AP_GROUPINFO("BAL_PITCH_TRIM", 40, ParametersG2, bal_pitch_trim, 0),
+#endif
 
     // 41 was Scripting
 
@@ -630,8 +641,10 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     AP_GROUPINFO("FS_GCS_TIMEOUT", 56, ParametersG2, fs_gcs_timeout, 5),
 
     // @Group: CIRC
+#if MODE_CIRCLE_ENABLED
     // @Path: mode_circle.cpp
     AP_SUBGROUPINFO(mode_circle, "CIRC", 57, ParametersG2, ModeCircle),
+#endif
 
 #if AP_WIFI_ESP32_ENABLED
     // @Group: WIFI_

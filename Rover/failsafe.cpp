@@ -84,9 +84,11 @@ void Rover::failsafe_trigger(uint8_t failsafe_type, const char* type_str, bool o
             case FailsafeAction::None:
                 break;
             case FailsafeAction::SmartRTL:
+#if MODE_SMARTRTL_ENABLED
                 if (set_mode(mode_smartrtl, ModeReason::FAILSAFE)) {
                     break;
                 }
+#endif
                 FALLTHROUGH;
             case FailsafeAction::RTL:
                 if (set_mode(mode_rtl, ModeReason::FAILSAFE)) {
@@ -97,9 +99,13 @@ void Rover::failsafe_trigger(uint8_t failsafe_type, const char* type_str, bool o
                 set_mode(mode_hold, ModeReason::FAILSAFE);
                 break;
             case FailsafeAction::SmartRTL_Hold:
+#if MODE_SMARTRTL_ENABLED
                 if (!set_mode(mode_smartrtl, ModeReason::FAILSAFE)) {
                     set_mode(mode_hold, ModeReason::FAILSAFE);
                 }
+#else
+                set_mode(mode_hold, ModeReason::FAILSAFE);
+#endif
                 break;
             case FailsafeAction::Loiter_Hold:
                 if (!set_mode(mode_loiter, ModeReason::FAILSAFE)) {
@@ -120,9 +126,11 @@ void Rover::handle_battery_failsafe(const char* type_str, const int8_t action)
             case FailsafeAction::None:
                 break;
             case FailsafeAction::SmartRTL:
+#if MODE_SMARTRTL_ENABLED
                 if (set_mode(mode_smartrtl, ModeReason::BATTERY_FAILSAFE)) {
                     break;
                 }
+#endif
                 FALLTHROUGH;
             case FailsafeAction::RTL:
                 if (set_mode(mode_rtl, ModeReason::BATTERY_FAILSAFE)) {
@@ -138,9 +146,13 @@ void Rover::handle_battery_failsafe(const char* type_str, const int8_t action)
                 }
                 break;
             case FailsafeAction::SmartRTL_Hold:
+#if MODE_SMARTRTL_ENABLED
                 if (!set_mode(mode_smartrtl, ModeReason::BATTERY_FAILSAFE)) {
                     set_mode(mode_hold, ModeReason::BATTERY_FAILSAFE);
                 }
+#else
+                set_mode(mode_hold, ModeReason::BATTERY_FAILSAFE);
+#endif
                 break;
             case FailsafeAction::Terminate:
 #if AP_ROVER_ADVANCED_FAILSAFE_ENABLED

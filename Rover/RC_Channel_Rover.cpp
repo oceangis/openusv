@@ -172,12 +172,16 @@ bool RC_Channel_Rover::do_aux_function(const AuxFuncTrigger &trigger)
 
     // set mode to Acro
     case AUX_FUNC::ACRO:
+#if MODE_ACRO_ENABLED
         do_aux_function_change_mode(rover.mode_acro, ch_flag);
+#endif
         break;
 
     // set mode to Steering
     case AUX_FUNC::STEERING:
+#if MODE_STEERING_ENABLED
         do_aux_function_change_mode(rover.mode_steering, ch_flag);
+#endif
         break;
 
     // set mode to Hold
@@ -197,7 +201,9 @@ bool RC_Channel_Rover::do_aux_function(const AuxFuncTrigger &trigger)
 
     // set mode to SmartRTL
     case AUX_FUNC::SMART_RTL:
+#if MODE_SMARTRTL_ENABLED
         do_aux_function_change_mode(rover.mode_smartrtl, ch_flag);
+#endif
         break;
 
     // set mode to Guided
@@ -219,11 +225,15 @@ bool RC_Channel_Rover::do_aux_function(const AuxFuncTrigger &trigger)
 
     // set mode to Simple
     case AUX_FUNC::SIMPLE:
+#if MODE_SIMPLE_ENABLED
         do_aux_function_change_mode(rover.mode_simple, ch_flag);
+#endif
         break;
 
     case AUX_FUNC::CIRCLE:
+#if MODE_CIRCLE_ENABLED
         do_aux_function_change_mode(rover.g2.mode_circle, ch_flag);
+#endif
         break;
 
     // trigger sailboat tack

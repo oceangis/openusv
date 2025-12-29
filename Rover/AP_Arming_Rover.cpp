@@ -154,7 +154,9 @@ bool AP_Arming_Rover::arm(AP_Arming::Method method, const bool do_arming_checks)
     rover.g2.smart_rtl.set_home(true);
 
     // initialize simple mode heading
+#if MODE_SIMPLE_ENABLED
     rover.mode_simple.init_heading();
+#endif
 
     // save home heading for use in sail vehicles
     rover.g2.windvane.record_home_heading();

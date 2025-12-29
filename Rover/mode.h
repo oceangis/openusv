@@ -19,17 +19,14 @@ public:
         LOITER       = 5,
         FOLLOW       = 6,
         SIMPLE       = 7,
-#if MODE_DOCK_ENABLED
         DOCK         = 8,
-#endif
         CIRCLE       = 9,
         AUTO         = 10,
         RTL          = 11,
         SMART_RTL    = 12,
-        POSHOLD      = 13,  // Position Hold mode for vectored boats (X-type)
+        POSHOLD      = 13,
         GUIDED       = 15,
         INITIALISING = 16,
-        // Mode number 30 reserved for "offboard" for external/lua control.
     };
 
     // Constructor
@@ -407,6 +404,7 @@ private:
     AP_Mission_ChangeDetector mis_change_detector;
 };
 
+#if MODE_CIRCLE_ENABLED
 class ModeCircle : public Mode
 {
 public:
@@ -506,6 +504,7 @@ protected:
     float dist_to_edge_m;   // distance to edge of circle in meters (equivalent to crosstrack error)
     bool tracking_back;     // true if the vehicle is trying to track back onto the circle
 };
+#endif  // MODE_CIRCLE_ENABLED
 
 class ModeGuided : public Mode
 {
@@ -666,6 +665,7 @@ protected:
 
 // Position Hold mode - ArduSub-style control for X-type vectored boats
 // Provides independent position hold and heading hold with body-frame input
+#if MODE_POSHOLD_ENABLED
 class ModePosHold : public Mode
 {
 public:
@@ -709,6 +709,7 @@ private:
     void control_position();    // position/velocity control
     void control_heading();     // heading hold control (ArduSub-style)
 };
+#endif  // MODE_POSHOLD_ENABLED
 
 class ModeManual : public Mode
 {
@@ -779,6 +780,7 @@ protected:
 
 };
 
+#if MODE_SMARTRTL_ENABLED
 class ModeSmartRTL : public Mode
 {
 public:
@@ -822,9 +824,11 @@ protected:
     bool _load_point;
     bool _loitering;        // true if loitering at end of SRTL
 };
+#endif  // MODE_SMARTRTL_ENABLED
 
 
 
+#if MODE_STEERING_ENABLED
 class ModeSteering : public Mode
 {
 public:
@@ -849,6 +853,7 @@ private:
 
     float _desired_lat_accel;   // desired lateral acceleration calculated from pilot steering input
 };
+#endif  // MODE_STEERING_ENABLED
 
 class ModeInitializing : public Mode
 {
@@ -907,6 +912,7 @@ protected:
 };
 #endif
 
+#if MODE_SIMPLE_ENABLED
 class ModeSimple : public Mode
 {
 public:
@@ -929,6 +935,7 @@ private:
     float _initial_heading_cd;  // vehicle heading (in centi-degrees) at moment vehicle was armed
     float _desired_heading_cd;  // latest desired heading (in centi-degrees) from pilot
 };
+#endif  // MODE_SIMPLE_ENABLED
 
 #if MODE_DOCK_ENABLED
 class ModeDock : public Mode

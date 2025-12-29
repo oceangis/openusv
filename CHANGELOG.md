@@ -1,5 +1,41 @@
 # Changelog
 
+## [v1.5.0] - 2025-12-29
+
+### 优化 (Improved)
+- **禁用 Balance Bot 功能**: USV/船型不需要两轮平衡车功能
+  - `AP_ROVER_BALANCEBOT_ENABLED = 0`
+  - 减少代码体积和内存占用
+
+- **串口映射优化**: 更直观的串口编号映射
+  - SERIAL0 = UART0 (MAVLink)
+  - SERIAL1 = UART1 (GPS) ← 修复 GPS 无法识别问题
+  - SERIAL3 = LoRa (虚拟串口，底层 SPI)
+
+### 修复 (Fixed)
+- **Balance Bot 条件编译**: 修复禁用 balance bot 后的编译错误
+  - `balance_bot.cpp` - 添加 stub 函数
+  - `AR_AttitudeControl.cpp/h` - 条件编译 pitch to throttle PID
+  - `Log.cpp` - 条件编译 get_desired_pitch() 调用
+  - `GCS_MAVLink_Rover.cpp` - 条件编译 balance bot 相关代码
+
+- **GPS 串口配置**: 修复 GPS 数据无法读取问题
+  - 原因: SERIAL1 映射到 Empty 驱动，GPS 配置在 SERIAL3
+  - 修复: HAL_ESP32_Class.cpp 中 serial1Driver 改为 UARTDriver(1)
+
+### 技术细节
+- **串口映射** (HAL_ESP32_Class.cpp):
+  - SERIAL0 = UARTDriver(0) // UART0, MAVLink
+  - SERIAL1 = UARTDriver(1) // UART1, GPS @ 38400
+  - SERIAL2 = Empty         // 无物理 UART
+  - SERIAL3 = LoRaUARTDriver // 虚拟串口 (SPI→LoRa)
+
+- **GPS 硬件**:
+  - u-blox MAX-M10S @ UART1 (RX=GPIO18, TX=GPIO17)
+  - 波特率: 38400
+
+---
+
 ## [v1.4.0] - 2025-12-28
 
 ### 新增 (Added)

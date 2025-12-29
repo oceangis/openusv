@@ -1,5 +1,8 @@
 #include "Rover.h"
 
+
+#if MODE_STEERING_ENABLED
+
 void ModeSteering::update()
 {
     // get speed forward
@@ -52,3 +55,6 @@ void ModeSteering::update()
     // run speed to throttle controller
     calc_throttle(desired_speed, true);
 }
+
+
+#endif  // MODE_STEERING_ENABLED

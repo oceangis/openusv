@@ -49,8 +49,8 @@ define HAL_BRD_OPTIONS_DEFAULT 2
 # ========================================================================
 define DEFAULT_SERIAL0_PROTOCOL SerialProtocol_MAVLink2
 define DEFAULT_SERIAL0_BAUD 115200
-define DEFAULT_SERIAL3_PROTOCOL SerialProtocol_GPS
-define DEFAULT_SERIAL3_BAUD 38400
+define DEFAULT_SERIAL1_PROTOCOL SerialProtocol_GPS
+define DEFAULT_SERIAL1_BAUD 38400
 
 # GPS Configuration
 define GPS_TYPE 1
@@ -165,3 +165,66 @@ define AP_WIFI_ESP32_ENABLED 0
 
 # Disable WiFi - causes main loop blocking during init
 define AP_WIFI_ESP32_ENABLED 0
+
+# ========================================================================
+# USV Mode Simplification - Disable unused modes for fishing/feeding boat
+# Keep only: MANUAL, HOLD, AUTO, RTL, LOITER, GUIDED
+# ========================================================================
+define MODE_ACRO_ENABLED 0
+define MODE_STEERING_ENABLED 0
+define MODE_CIRCLE_ENABLED 0
+define MODE_SMARTRTL_ENABLED 0
+define MODE_SIMPLE_ENABLED 0
+define MODE_POSHOLD_ENABLED 0
+
+# ========================================================================
+# RC Channel Simplification - Only 6 channels for fishing boat
+# ========================================================================
+define NUM_RC_CHANNELS 6
+
+# ========================================================================
+# Relay Simplification - Only 2 relays for fishing boat
+# ========================================================================
+define AP_RELAY_NUM_RELAYS 2
+
+# ========================================================================
+# Rangefinder Simplification - Only 2 for depth sounder (DST800)
+# ========================================================================
+define RANGEFINDER_MAX_INSTANCES 2
+
+# ========================================================================
+# Notch Filter - Disable for boat (low vibration, using ExternalAHRS)
+# ========================================================================
+define AP_INERTIALSENSOR_HARMONICNOTCH_ENABLED 0
+
+# ========================================================================
+# Filter - Disable FILT1-8 for boat (not needed)
+# ========================================================================
+define AP_FILTER_ENABLED 0
+
+# ========================================================================
+# Proximity Sensors - Keep 1 for boat
+# ========================================================================
+define AP_PROXIMITY_MAX_INSTANCES 1
+
+# ========================================================================
+# Serial Ports - ESP32-S3 has only 3 UARTs, disable extra serial params
+# ========================================================================
+define HAL_UART_NUM_SERIAL_PORTS 3
+define HAL_HAVE_SERIAL3_PARAMS 0
+define HAL_HAVE_SERIAL4_PARAMS 0
+define HAL_HAVE_SERIAL5_PARAMS 0
+define HAL_HAVE_SERIAL6_PARAMS 0
+define HAL_HAVE_SERIAL7_PARAMS 0
+define HAL_HAVE_SERIAL8_PARAMS 0
+define HAL_HAVE_SERIAL9_PARAMS 0
+
+# ========================================================================
+# Airspeed - Disable for boat (aircraft sensor)
+# ========================================================================
+define AP_AIRSPEED_ENABLED 0
+
+# ========================================================================
+# Balance Bot - Disable for boat (two-wheel balancing robot)
+# ========================================================================
+define AP_ROVER_BALANCEBOT_ENABLED 0

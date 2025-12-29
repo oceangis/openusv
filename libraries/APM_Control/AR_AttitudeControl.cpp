@@ -337,6 +337,7 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("_DECEL_MAX", 9, AR_AttitudeControl, _throttle_decel_max, 0.00f),
 
+#if AP_ROVER_BALANCEBOT_ENABLED
     // @Param: _BAL_P
     // @DisplayName: Pitch control P gain
     // @Description: Pitch control P gain for BalanceBots.  Converts the error between the desired pitch (in radians) and actual pitch to a motor output (in the range -1 to +1)
@@ -445,6 +446,7 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Increment: 0.01
     // @User: Standard
     AP_GROUPINFO("_BAL_PIT_FF", 11, AR_AttitudeControl, _pitch_to_throttle_ff, AR_ATTCONTROL_BAL_PITCH_FF),
+#endif  // AP_ROVER_BALANCEBOT_ENABLED
 
     // @Param: _SAIL_P
     // @DisplayName: Sail Heel control P gain
@@ -556,6 +558,7 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("_TURN_MAX_G", 13, AR_AttitudeControl, _turn_lateral_G_max, 0.6f),
 
+#if AP_ROVER_BALANCEBOT_ENABLED
     // @Param: _BAL_LIM_TC
     // @DisplayName: Pitch control limit time constant
     // @Description: Pitch control limit time constant to protect against falling.  Lower values limit pitch more quickly, higher values limit more slowly.  Set to 0 to disable
@@ -571,6 +574,7 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Increment: 0.01
     // @User: Standard
     AP_GROUPINFO("_BAL_LIM_THR", 15, AR_AttitudeControl, _pitch_limit_throttle_thresh, AR_ATTCONTROL_PITCH_LIM_THR_THRESH),
+#endif  // AP_ROVER_BALANCEBOT_ENABLED BAL_LIM
 
     // @Param: _STR_DEC_MAX
     // @DisplayName: Steering control angular deceleration maximum
@@ -633,7 +637,9 @@ AR_AttitudeControl::AR_AttitudeControl() :
     _steer_angle_p(AR_ATTCONTROL_STEER_ANG_P),
     _steer_rate_pid(AR_ATTCONTROL_STEER_RATE_P, AR_ATTCONTROL_STEER_RATE_I, AR_ATTCONTROL_STEER_RATE_D, AR_ATTCONTROL_STEER_RATE_FF, AR_ATTCONTROL_STEER_RATE_IMAX, 0.0f, AR_ATTCONTROL_STEER_RATE_FILT, 0.0f),
     _throttle_speed_pid(AR_ATTCONTROL_THR_SPEED_P, AR_ATTCONTROL_THR_SPEED_I, AR_ATTCONTROL_THR_SPEED_D, 0.0f, AR_ATTCONTROL_THR_SPEED_IMAX, 0.0f, AR_ATTCONTROL_THR_SPEED_FILT, 0.0f),
+#if AP_ROVER_BALANCEBOT_ENABLED
     _pitch_to_throttle_pid(AR_ATTCONTROL_PITCH_THR_P, AR_ATTCONTROL_PITCH_THR_I, AR_ATTCONTROL_PITCH_THR_D, 0.0f, AR_ATTCONTROL_PITCH_THR_IMAX, 0.0f, AR_ATTCONTROL_PITCH_THR_FILT, 0.0f),
+#endif
     _sailboat_heel_pid(AR_ATTCONTROL_HEEL_SAIL_P, AR_ATTCONTROL_HEEL_SAIL_I, AR_ATTCONTROL_HEEL_SAIL_D, 0.0f, AR_ATTCONTROL_HEEL_SAIL_IMAX, 0.0f, AR_ATTCONTROL_HEEL_SAIL_FILT, 0.0f),
     _lateral_speed_pid(AR_ATTCONTROL_LAT_SPEED_P, AR_ATTCONTROL_LAT_SPEED_I, AR_ATTCONTROL_LAT_SPEED_D, 0.0f, AR_ATTCONTROL_LAT_SPEED_IMAX, 0.0f, AR_ATTCONTROL_LAT_SPEED_FILT, 0.0f)
 {
@@ -922,6 +928,7 @@ float AR_AttitudeControl::get_throttle_out_stop(bool motor_limit_low, bool motor
     return get_throttle_out_speed(desired_speed_limited, motor_limit_low, motor_limit_high, cruise_speed, cruise_throttle, dt);
 }
 
+#if AP_ROVER_BALANCEBOT_ENABLED
 // balancebot pitch to throttle controller
 // returns a throttle output from -1 to +1 given a desired pitch angle (in radians)
 // pitch_max should be the user defined max pitch angle (in radians)
@@ -935,7 +942,9 @@ float AR_AttitudeControl::get_throttle_out_from_pitch(float desired_pitch, float
     const uint32_t now = AP_HAL::millis();
     if ((_balance_last_ms == 0) || ((now - _balance_last_ms) > AR_ATTCONTROL_TIMEOUT_MS)) {
         _pitch_to_throttle_pid.reset_filter();
-        _pitch_to_throttle_pid.reset_I();
+    #if AP_ROVER_BALANCEBOT_ENABLED
+    _pitch_to_throttle_pid.reset_I();
+#endif
         _pitch_limit_low = -pitch_max;
         _pitch_limit_high = pitch_max;
     }
@@ -991,6 +1000,8 @@ float AR_AttitudeControl::get_desired_pitch() const
 
     return _pitch_to_throttle_pid.get_pid_info().target;
 }
+
+#endif  // AP_ROVER_BALANCEBOT_ENABLED
 
 // Sailboat heel(roll) angle controller releases sail to keep at maximum heel angle
 // but does not attempt to reach maximum heel angle, ie only lets sails out, does not pull them in
@@ -1140,7 +1151,9 @@ void AR_AttitudeControl::relax_I()
 {
     _steer_rate_pid.reset_I();
     _throttle_speed_pid.reset_I();
+#if AP_ROVER_BALANCEBOT_ENABLED
     _pitch_to_throttle_pid.reset_I();
+#endif
 }
 
 void AR_AttitudeControl::set_notch_sample_rate(float sample_rate)
@@ -1148,7 +1161,9 @@ void AR_AttitudeControl::set_notch_sample_rate(float sample_rate)
 #if AP_FILTER_ENABLED
     _steer_rate_pid.set_notch_sample_rate(sample_rate);
     _throttle_speed_pid.set_notch_sample_rate(sample_rate);
+#if AP_ROVER_BALANCEBOT_ENABLED
     _pitch_to_throttle_pid.set_notch_sample_rate(sample_rate);
+#endif
     _lateral_speed_pid.set_notch_sample_rate(sample_rate);
 #endif
 }

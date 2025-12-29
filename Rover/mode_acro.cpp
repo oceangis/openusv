@@ -1,5 +1,8 @@
 #include "Rover.h"
 
+
+#if MODE_ACRO_ENABLED
+
 void ModeAcro::update()
 {
     // get speed forward
@@ -62,3 +65,6 @@ void ModeAcro::handle_tack_request()
 {
     g2.sailboat.handle_tack_request_acro();
 }
+
+
+#endif  // MODE_ACRO_ENABLED

@@ -12,6 +12,9 @@
 
 #include "Rover.h"
 
+
+#if MODE_POSHOLD_ENABLED
+
 bool ModePosHold::_enter()
 {
     // Only allow entry for X-type vectored boats
@@ -218,3 +221,6 @@ float ModePosHold::get_distance_to_destination() const
 {
     return rover.current_loc.get_distance(_position_target);
 }
+
+
+#endif  // MODE_POSHOLD_ENABLED

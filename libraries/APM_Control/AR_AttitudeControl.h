@@ -1,4 +1,8 @@
 #pragma once
+// Balance bot enable/disable - default enabled if not defined
+#ifndef AP_ROVER_BALANCEBOT_ENABLED
+#define AP_ROVER_BALANCEBOT_ENABLED 1
+#endif
 
 #include <AP_Common/AP_Common.h>
 #include <AC_PID/AC_PID.h>
@@ -87,8 +91,10 @@ public:
     // pitch limit protection is implemented within get_throttle_out_from_pitch
     bool pitch_limited() const { return _pitch_limited; }
 
+#if AP_ROVER_BALANCEBOT_ENABLED
     // get latest desired pitch in radians for reporting purposes
     float get_desired_pitch() const;
+#endif
 
     // Sailboat heel(roll) angle contorller, release sail to keep at maximum heel angle
     float get_sail_out_from_heel(float desired_heel, float dt);
@@ -96,7 +102,9 @@ public:
     // low level control accessors for reporting and logging
     AC_P& get_steering_angle_p() { return _steer_angle_p; }
     AC_PID& get_steering_rate_pid() { return _steer_rate_pid; }
+#if AP_ROVER_BALANCEBOT_ENABLED
     AC_PID& get_pitch_to_throttle_pid() { return _pitch_to_throttle_pid; }
+#endif
     AC_PID& get_sailboat_heel_pid() { return _sailboat_heel_pid; }
     const AP_PIDInfo& get_throttle_speed_pid_info() const { return _throttle_speed_pid_info; }
 
@@ -178,10 +186,12 @@ private:
     AC_P     _steer_angle_p;        // steering angle controller
     AC_PID   _steer_rate_pid;       // steering rate controller
     AC_PID   _throttle_speed_pid;   // throttle speed controller
+#if AP_ROVER_BALANCEBOT_ENABLED
     AC_PID   _pitch_to_throttle_pid;// balancebot pitch controller
     AP_Float _pitch_to_throttle_ff; // balancebot feed forward from current pitch angle
     AP_Float _pitch_limit_tc;       // balancebot pitch limit protection time constant
     AP_Float _pitch_limit_throttle_thresh;  // balancebot pitch limit throttle threshold (in the range 0 to 1.0)
+#endif  // AP_ROVER_BALANCEBOT_ENABLED
 
     AP_Float _throttle_accel_max;   // speed/throttle control acceleration (and deceleration) maximum in m/s/s.  0 to disable limits
     AP_Float _throttle_decel_max;    // speed/throttle control deceleration maximum in m/s/s. 0 to use ATC_ACCEL_MAX for deceleration

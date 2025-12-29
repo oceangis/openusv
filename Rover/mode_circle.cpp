@@ -3,6 +3,9 @@
 #define AR_CIRCLE_ACCEL_DEFAULT         1.0 // default acceleration in m/s/s if not specified by user
 #define AR_CIRCLE_RADIUS_MIN            0.1 // minimum radius in meters
 
+
+#if MODE_CIRCLE_ENABLED
+
 const AP_Param::GroupInfo ModeCircle::var_info[] = {
 
     // @Param: _RADIUS
@@ -320,3 +323,6 @@ void ModeCircle::check_config_radius()
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Circle: radius increased to TURN_RADIUS (%4.1f)", (double)g2.turn_radius);
     }
 }
+
+
+#endif  // MODE_CIRCLE_ENABLED

@@ -295,7 +295,11 @@ void Mode::calc_throttle(float target_speed, bool avoidance_enabled)
         g2.avoid.adjust_speed(0.0f, 0.5f * attitude_control.get_decel_max(), ahrs.get_yaw_rad(), target_speed, rover.G_Dt);
         if (g2.sailboat.tack_enabled() && g2.avoid.limits_active()) {
             // we are a sailboat trying to avoid fence, try a tack
+#if MODE_ACRO_ENABLED
             if (rover.control_mode != &rover.mode_acro) {
+#else
+            {
+#endif
                 rover.control_mode->handle_tack_request();
             }
         }
@@ -519,41 +523,53 @@ Mode *Rover::mode_from_mode_num(const enum Mode::Number num)
     case Mode::Number::MANUAL:
         ret = &mode_manual;
         break;
+#if MODE_ACRO_ENABLED
     case Mode::Number::ACRO:
         ret = &mode_acro;
         break;
+#endif
+#if MODE_STEERING_ENABLED
     case Mode::Number::STEERING:
         ret = &mode_steering;
         break;
+#endif
     case Mode::Number::HOLD:
         ret = &mode_hold;
         break;
     case Mode::Number::LOITER:
         ret = &mode_loiter;
         break;
+#if MODE_POSHOLD_ENABLED
     case Mode::Number::POSHOLD:
         ret = &mode_poshold;
         break;
+#endif
 #if MODE_FOLLOW_ENABLED
     case Mode::Number::FOLLOW:
         ret = &mode_follow;
         break;
 #endif
+#if MODE_SIMPLE_ENABLED
     case Mode::Number::SIMPLE:
         ret = &mode_simple;
         break;
+#endif
+#if MODE_CIRCLE_ENABLED
     case Mode::Number::CIRCLE:
         ret = &g2.mode_circle;
         break;
+#endif
     case Mode::Number::AUTO:
         ret = &mode_auto;
         break;
     case Mode::Number::RTL:
         ret = &mode_rtl;
         break;
+#if MODE_SMARTRTL_ENABLED
     case Mode::Number::SMART_RTL:
         ret = &mode_smartrtl;
         break;
+#endif
     case Mode::Number::GUIDED:
         ret = &mode_guided;
         break;

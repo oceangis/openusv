@@ -141,7 +141,9 @@ void ModeAuto::update()
             break;
 
         case SubMode::Circle:
+#if MODE_CIRCLE_ENABLED
             g2.mode_circle.update();
+#endif
             break;
     }
 }
@@ -173,7 +175,11 @@ float ModeAuto::wp_bearing() const
     case SubMode::NavScriptTime:
         return rover.mode_guided.wp_bearing();
     case SubMode::Circle:
+#if MODE_CIRCLE_ENABLED
         return g2.mode_circle.wp_bearing();
+#else
+        return 0.0f;
+#endif
     }
 
     // this line should never be reached
@@ -197,7 +203,11 @@ float ModeAuto::nav_bearing() const
     case SubMode::NavScriptTime:
         return rover.mode_guided.nav_bearing();
     case SubMode::Circle:
+#if MODE_CIRCLE_ENABLED
         return g2.mode_circle.nav_bearing();
+#else
+        return 0.0f;
+#endif
     }
 
     // this line should never be reached
@@ -221,7 +231,11 @@ float ModeAuto::crosstrack_error() const
     case SubMode::NavScriptTime:
         return rover.mode_guided.crosstrack_error();
     case SubMode::Circle:
+#if MODE_CIRCLE_ENABLED
         return g2.mode_circle.crosstrack_error();
+#else
+        return 0.0f;
+#endif
     }
 
     // this line should never be reached
@@ -245,7 +259,11 @@ float ModeAuto::get_desired_lat_accel() const
     case SubMode::NavScriptTime:
         return rover.mode_guided.get_desired_lat_accel();
     case SubMode::Circle:
+#if MODE_CIRCLE_ENABLED
         return g2.mode_circle.get_desired_lat_accel();
+#else
+        return 0.0f;
+#endif
     }
 
     // this line should never be reached
@@ -270,7 +288,11 @@ float ModeAuto::get_distance_to_destination() const
     case SubMode::NavScriptTime:
         return rover.mode_guided.get_distance_to_destination();
     case SubMode::Circle:
+#if MODE_CIRCLE_ENABLED
         return g2.mode_circle.get_distance_to_destination();
+#else
+        return 0.0f;
+#endif
     }
 
     // this line should never be reached
@@ -299,7 +321,11 @@ bool ModeAuto::get_desired_location(Location& destination) const
     case SubMode::NavScriptTime:
         return rover.mode_guided.get_desired_location(destination);
     case SubMode::Circle:
+#if MODE_CIRCLE_ENABLED
         return g2.mode_circle.get_desired_location(destination);
+#else
+        return false;
+#endif
     }
 
     // we should never reach here but just in case
@@ -341,7 +367,11 @@ bool ModeAuto::reached_destination() const
     case SubMode::NavScriptTime:
         return rover.mode_guided.reached_destination();
     case SubMode::Circle:
+#if MODE_CIRCLE_ENABLED
         return g2.mode_circle.reached_destination();
+#else
+        return true;
+#endif
     }
 
     // we should never reach here but just in case, return true to allow missions to continue
@@ -366,7 +396,11 @@ bool ModeAuto::set_desired_speed(float speed)
     case SubMode::NavScriptTime:
         return rover.mode_guided.set_desired_speed(speed);
     case SubMode::Circle:
+#if MODE_CIRCLE_ENABLED
         return g2.mode_circle.set_desired_speed(speed);
+#else
+        return false;
+#endif
     }
     return false;
 }
@@ -620,7 +654,11 @@ void ModeAuto::exit_mission()
         }
         break;
     case DoneBehaviour::ACRO:
+#if MODE_ACRO_ENABLED
         if (rover.set_mode(rover.mode_acro, ModeReason::MISSION_END)) {
+#else
+        if (false) {
+#endif
             return;
         }
         break;
@@ -931,7 +969,11 @@ bool ModeAuto::do_circle(const AP_Mission::Mission_Command& cmd)
     }
 
     // initialise circle mode
+#if MODE_CIRCLE_ENABLED
     if (g2.mode_circle.set_center(circle_center, circle_radius_m, cmd.content.location.loiter_ccw)) {
+#else
+    if (false) {
+#endif
         _submode = SubMode::Circle;
         return true;
     }
@@ -942,7 +984,11 @@ bool ModeAuto::verify_circle(const AP_Mission::Mission_Command& cmd)
 {
     const float turns = cmd.get_loiter_turns();
     // check if we have completed circling
+#if MODE_CIRCLE_ENABLED
     return ((g2.mode_circle.get_angle_total_rad() / M_2PI) >= turns);
+#else
+    return true;
+#endif
 }
 
 /********************************************************************************/

@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include "Rover.h"
 
+#if AP_ROVER_BALANCEBOT_ENABLED
 // Function to set a desired pitch angle according to throttle
 void Rover::balancebot_pitch_control(float &throttle)
 {
@@ -18,3 +19,15 @@ bool Rover::is_balancebot() const
 {
     return ((enum frame_class)g2.frame_class.get() == FRAME_BALANCEBOT);
 }
+#else
+// Stub functions when balance bot is disabled
+void Rover::balancebot_pitch_control(float &throttle)
+{
+    // Balance bot disabled - do nothing
+}
+
+bool Rover::is_balancebot() const
+{
+    return false;
+}
+#endif  // AP_ROVER_BALANCEBOT_ENABLED

@@ -344,8 +344,10 @@ public:
     AC_Avoid avoid;
 #endif
 
+#if AP_ROVER_BALANCEBOT_ENABLED
     // pitch angle at 100% throttle
     AP_Float bal_pitch_max;
+#endif
 
     // pitch/roll angle for crash check
     AP_Int8 crash_angle;
@@ -372,8 +374,10 @@ public:
     AP_Rally_Rover rally;
 #endif
 
+#if MODE_SIMPLE_ENABLED
     // Simple mode types
     AP_Int8 simple_type;
+#endif
 
     // windvane
     AP_WindVane windvane;
@@ -383,8 +387,10 @@ public:
     AP_Enum<ModeAuto::DoneBehaviour> mis_done_behave;
 #endif
 
+#if AP_ROVER_BALANCEBOT_ENABLED
     // balance both pitch trim
     AP_Float bal_pitch_trim;
+#endif
 
     // stick mixing for auto modes
     AP_Int8     stick_mixing;
@@ -429,7 +435,9 @@ public:
     // FS GCS timeout trigger time
     AP_Float fs_gcs_timeout;
 
+#if MODE_CIRCLE_ENABLED
     class ModeCircle mode_circle;
+#endif
 
 #if AP_WIFI_ESP32_ENABLED
     // WiFi configuration module

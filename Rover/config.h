@@ -44,6 +44,38 @@
 #define DEFAULT_LOG_BITMASK    0xffff
 
 //////////////////////////////////////////////////////////////////////////////
+// Mode enable/disable - default to enabled if not defined in hwdef.dat
+//////////////////////////////////////////////////////////////////////////////
+#ifndef MODE_ACRO_ENABLED
+# define MODE_ACRO_ENABLED 1
+#endif
+
+#ifndef MODE_STEERING_ENABLED
+# define MODE_STEERING_ENABLED 1
+#endif
+
+#ifndef MODE_CIRCLE_ENABLED
+# define MODE_CIRCLE_ENABLED 1
+#endif
+
+#ifndef MODE_SMARTRTL_ENABLED
+# define MODE_SMARTRTL_ENABLED 1
+#endif
+
+#ifndef MODE_SIMPLE_ENABLED
+# define MODE_SIMPLE_ENABLED 1
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+// Balance Bot - enable/disable balance bot functionality
+#ifndef AP_ROVER_BALANCEBOT_ENABLED
+# define AP_ROVER_BALANCEBOT_ENABLED 1
+#endif
+#ifndef MODE_POSHOLD_ENABLED
+# define MODE_POSHOLD_ENABLED 1
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
 // Dock mode - allows vehicle to dock to a docking target
 #ifndef MODE_DOCK_ENABLED
 # define MODE_DOCK_ENABLED AC_PRECLAND_ENABLED
