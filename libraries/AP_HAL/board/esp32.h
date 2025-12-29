@@ -133,7 +133,7 @@ typedef ESP32::CANIface HAL_CANIface;
 #endif
 
 // we don't need 32, 16 is enough
-#define NUM_SERVO_CHANNELS 16
+#define NUM_SERVO_CHANNELS 4
 
 // disble temp cal of gyros by default
 #define HAL_INS_TEMPERATURE_CAL_ENABLE 0
@@ -155,7 +155,7 @@ typedef ESP32::CANIface HAL_CANIface;
 
 // disable avoid-fence-follow in copter, these all kinda need each other, so its all or none.
 #define AP_AVOIDANCE_ENABLED 0
-#define AP_FENCE_ENABLED 0
+#define AP_FENCE_ENABLED 1  // USV: 启用地理围栏安全功能
 #define MODE_FOLLOW_ENABLED 0
 #define AP_OAPATHPLANNER_ENABLED 0
 

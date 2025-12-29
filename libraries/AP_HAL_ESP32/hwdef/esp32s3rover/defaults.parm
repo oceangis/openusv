@@ -109,3 +109,17 @@ LOG_BITMASK      176126       # Default logging mask
 # ========================================
 SERIAL0_PROTOCOL 2            # MAVLink2 on USB
 SERIAL0_BAUD     115200
+
+# ========================================
+# MAVLink Stream Rates - LoRa 优化
+# ========================================
+SR0_RAW_SENS     0            # 禁用原始IMU数据
+SR0_RAW_CTRL     0            # 禁用原始控制输出
+SR0_EXT_STAT     1            # 系统状态 1Hz
+SR0_RC_CHAN      1            # RC/电机输出 1Hz (调试用)
+SR0_POSITION     1            # 位置 1Hz
+SR0_EXTRA1       1            # 姿态 1Hz
+SR0_EXTRA2       1            # VFR_HUD 1Hz
+SR0_EXTRA3       1            # 电池/水深 1Hz
+SR0_PARAMS       10           # 参数 (仅连接时)
+SR0_ADSB         0            # 禁用ADSB

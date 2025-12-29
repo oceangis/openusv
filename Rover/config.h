@@ -157,3 +157,80 @@
 #ifndef AP_AIRSPEED_ENABLED
 #define AP_AIRSPEED_ENABLED 0
 #endif
+
+//////////////////////////////////////////////////////////////////////////////
+// MAVLink 流速率优化
+// 禁用不必要的数据流以节省带宽 (LoRa 低带宽场景)
+//////////////////////////////////////////////////////////////////////////////
+
+// 禁用原始传感器数据流 (RAW_IMU, SCALED_IMU, SCALED_PRESSURE)
+#ifndef AP_MAV_DEFAULT_STREAM_RATE_RAW_SENS
+#define AP_MAV_DEFAULT_STREAM_RATE_RAW_SENS 0
+#endif
+
+// 禁用原始控制输出流 (MSG_SERVO_OUT - Rover中为空)
+#ifndef AP_MAV_DEFAULT_STREAM_RATE_RAW_CTRL
+#define AP_MAV_DEFAULT_STREAM_RATE_RAW_CTRL 0
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+// 禁用调试类 MAVLink 消息 (节省带宽)
+//////////////////////////////////////////////////////////////////////////////
+
+// 禁用 AHRS 调试消息 (MSG_AHRS in EXTRA3)
+#ifndef AP_MAVLINK_MSG_AHRS_ENABLED
+#define AP_MAVLINK_MSG_AHRS_ENABLED 0
+#endif
+
+// 禁用 EKF 状态报告 (MSG_EKF_STATUS_REPORT in EXTRA3)
+#ifndef AP_MAVLINK_MSG_EKF_STATUS_ENABLED
+#define AP_MAVLINK_MSG_EKF_STATUS_ENABLED 0
+#endif
+
+// 禁用振动数据 (MSG_VIBRATION in EXTRA3)
+#ifndef AP_MAVLINK_MSG_VIBRATION_ENABLED
+#define AP_MAVLINK_MSG_VIBRATION_ENABLED 0
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+// MAVLink 流速率优化 - 降低非关键数据频率
+//////////////////////////////////////////////////////////////////////////////
+
+// EXTRA1 (姿态数据) 降低到最低频率 - USV 姿态变化慢
+#ifndef AP_MAV_DEFAULT_STREAM_RATE_EXTRA1
+#define AP_MAV_DEFAULT_STREAM_RATE_EXTRA1 1
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+// 禁用底层调试消息 - USV 只需要状态信息
+//////////////////////////////////////////////////////////////////////////////
+
+// 禁用备用 AHRS (MSG_AHRS2 in EXTRA1)
+#ifndef AP_MAVLINK_MSG_AHRS2_ENABLED
+#define AP_MAVLINK_MSG_AHRS2_ENABLED 0
+#endif
+
+// 禁用本地位置 (MSG_LOCAL_POSITION in POSITION) - 与 GPS 重复
+#ifndef AP_MAVLINK_MSG_LOCAL_POSITION_ENABLED
+#define AP_MAVLINK_MSG_LOCAL_POSITION_ENABLED 0
+#endif
+
+// 禁用系统时间 (MSG_SYSTEM_TIME in EXTRA3)
+#ifndef AP_MAVLINK_MSG_SYSTEM_TIME_ENABLED
+#define AP_MAVLINK_MSG_SYSTEM_TIME_ENABLED 0
+#endif
+
+// 禁用通用距离传感器 (MSG_DISTANCE_SENSOR) - 用 WATER_DEPTH 代替
+#ifndef AP_MAVLINK_MSG_DISTANCE_SENSOR_ENABLED
+#define AP_MAVLINK_MSG_DISTANCE_SENSOR_ENABLED 0
+#endif
+
+// 禁用内存信息 (MSG_MEMINFO in EXT_STAT)
+#ifndef AP_MAVLINK_MSG_MEMINFO_ENABLED
+#define AP_MAVLINK_MSG_MEMINFO_ENABLED 0
+#endif
+
+// RC 通道流速率设为 0 - USV 无遥控器
+#ifndef AP_MAV_DEFAULT_STREAM_RATE_RC_CHAN
+#define AP_MAV_DEFAULT_STREAM_RATE_RC_CHAN 1  // 调试用，稳定后可设为0
+#endif

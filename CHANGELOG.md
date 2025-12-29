@@ -1,5 +1,64 @@
 # Changelog
 
+## [v1.7.0] - 2025-12-29
+
+### MAVLink 带宽优化 (LoRa 遥测适配)
+
+针对 LoRa 低带宽链路优化 MAVLink 数据传输，总带宽从 ~12 kbps 降至 ~4.2 kbps。
+
+#### 禁用的 MAVLink 消息
+
+| 消息 | 所属流 | 说明 |
+|------|--------|------|
+| MSG_AHRS | EXTRA3 | AHRS 调试信息 |
+| MSG_AHRS2 | EXTRA1 | 备用 AHRS |
+| MSG_EKF_STATUS_REPORT | EXTRA3 | EKF 状态 |
+| MSG_VIBRATION | EXTRA3 | 振动数据 |
+| MSG_LOCAL_POSITION | POSITION | 与 GPS 重复 |
+| MSG_SYSTEM_TIME | EXTRA3 | 非关键 |
+| MSG_DISTANCE_SENSOR | EXTRA3 | 用 WATER_DEPTH 代替 |
+| MSG_MEMINFO | EXT_STAT | 内存调试 |
+| RAW_SENS 流 | - | 原始 IMU 数据 |
+| RAW_CTRL 流 | - | 原始控制输出 |
+
+#### 保留的核心消息
+
+- HEARTBEAT - 连接状态
+- SYS_STATUS - 系统健康
+- GPS_RAW - GPS 状态
+- GLOBAL_POSITION_INT - 位置
+- ATTITUDE - 姿态
+- VFR_HUD - 速度/航向
+- BATTERY_STATUS - 电池
+- WATER_DEPTH - 测深仪
+- SERVO_OUTPUT_RAW - 电机输出 (调试)
+- RC_CHANNELS - RC 输入 (调试)
+
+#### 新增功能
+
+- AP_FENCE 启用 - 地理围栏安全功能
+
+#### 修改的文件
+
+- Rover/config.h - MAVLink 消息禁用宏
+- libraries/AP_HAL/board/esp32.h - AP_FENCE_ENABLED=1
+- libraries/GCS_MAVLink/GCS_config.h - 消息控制宏定义
+- libraries/GCS_MAVLink/GCS_MAVLink_Parameters.cpp - 条件编译
+- hwdef/esp32s3rover/defaults.parm - 默认流速率
+- params/usv_minimal.param - 参数参考文件
+
+#### 带宽对比
+
+| 配置 | 带宽 |
+|------|------|
+| 原始 Rover 默认 | ~12 kbps |
+| v1.7.0 优化后 | ~4.2 kbps |
+| 节省 | ~65% |
+
+---
+
+# Changelog
+
 ## [v1.6.0] - 2025-12-29
 
 ### USV 功能精简 (USV Feature Optimization)

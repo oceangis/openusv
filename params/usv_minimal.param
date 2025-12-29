@@ -12,7 +12,7 @@ SR0_EXT_STAT,1          # GPS状态 1Hz
 SR0_RC_CHAN,1           # RC通道 1Hz
 SR0_RAW_CTRL,0          # 禁用原始控制输出
 SR0_POSITION,2          # 位置 2Hz (核心数据)
-SR0_EXTRA1,2            # 姿态 2Hz (核心数据)
+SR0_EXTRA1,1            # 姿态 1Hz (最低非零值)            # 姿态 2Hz (核心数据)
 SR0_EXTRA2,1            # VFR_HUD 1Hz (速度/航向)
 SR0_EXTRA3,0            # 禁用 AHRS2/WIND 等
 SR0_PARAMS,10           # 参数流 10Hz (仅连接时)
@@ -26,7 +26,7 @@ SR1_EXT_STAT,1
 SR1_RC_CHAN,1
 SR1_RAW_CTRL,0
 SR1_POSITION,2
-SR1_EXTRA1,2
+SR1_EXTRA1,1
 SR1_EXTRA2,1
 SR1_EXTRA3,0
 SR1_PARAMS,10
