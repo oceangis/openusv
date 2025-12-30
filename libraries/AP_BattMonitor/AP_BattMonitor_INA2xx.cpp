@@ -3,7 +3,7 @@
 #if AP_BATTERY_INA2XX_ENABLED
 
 /*
-  supports INA226, INA228 and INA238 I2C battery monitors
+  supports INA219, INA226, INA228, INA231 and INA238 I2C battery monitors
  */
 
 #include <AP_HAL/utility/sparse-endian.h>
@@ -55,6 +55,16 @@ extern const AP_HAL::HAL& hal;
 #define REG_231_CALIBRATION   0x05
 #define REG_231_MASK          0x06
 #define REG_231_ALERT         0x07
+
+// INA219 specific registers
+#define REG_219_CONFIG        0x00
+#define REG_219_CONFIG_DEFAULT 0x399F
+#define REG_219_CONFIG_RESET   0x8000
+#define REG_219_SHUNT_VOLTAGE 0x01
+#define REG_219_BUS_VOLTAGE   0x02
+#define REG_219_POWER         0x03
+#define REG_219_CURRENT       0x04
+#define REG_219_CALIBRATION   0x05
 
 
 #ifndef DEFAULT_BATTMON_INA2XX_MAX_AMPS
@@ -188,8 +198,26 @@ bool AP_BattMonitor_INA2XX::configure(DevType dtype)
         current_LSB = max_amps / (1U<<15);
         const uint16_t cal = 0.00512 / (current_LSB * rShunt);
         if (write_word(REG_231_CALIBRATION, cal)) {
+            dev_type = dtype;
             return true;
         }
+        break;
+    }
+
+    case DevType::INA219: {
+        // INA219 configuration
+        // Config: 32V bus, 320mV shunt, 12-bit, continuous
+        const uint16_t conf = 0x219F; // BRNG=1(32V), PG=3(320mV), BADC=3(12bit), SADC=3(12bit), Mode=7(continuous)
+        voltage_LSB = 0.004; // 4mV/bit (need to shift right 3 bits when reading)
+        current_LSB = max_amps / 32768.0;
+        const uint16_t cal = uint16_t(0.04096 / (current_LSB * rShunt));
+        if (write_word(REG_219_CONFIG, REG_219_CONFIG_RESET) && // reset
+            write_word(REG_219_CONFIG, conf) &&
+            write_word(REG_219_CALIBRATION, cal)) {
+            dev_type = dtype;
+            return true;
+        }
+        break;
     }
         
     }
@@ -308,6 +336,10 @@ bool AP_BattMonitor_INA2XX::detect_device(void)
         // no manufacturer ID for 231
         return configure(DevType::INA231);
     }
+    // INA219 detection - check for default config value 0x399F
+    if (read_word16(REG_219_CONFIG, id) && (id == 0x399F || (id & 0x3FFF) == 0x199F)) {
+        return configure(DevType::INA219);
+    }
 
     return false;
 }
@@ -392,6 +424,23 @@ void AP_BattMonitor_INA2XX::timer(void)
             return;
         }
         voltage = bus_voltage16 * voltage_LSB;
+        current = current16 * current_LSB;
+        break;
+    }
+
+    case DevType::INA219: {
+        int16_t bus_voltage16, current16;
+        if (!read_word16(REG_219_BUS_VOLTAGE, bus_voltage16) ||
+            !read_word16(REG_219_CURRENT, current16)) {
+            failed_reads++;
+            if (failed_reads > 10) {
+                // device has disconnected, we need to reconfigure it
+                dev_type = DevType::UNKNOWN;
+            }
+            return;
+        }
+        // INA219 bus voltage: bits 15-3 contain voltage, bit 0 is overflow
+        voltage = (bus_voltage16 >> 3) * voltage_LSB;
         current = current16 * current_LSB;
         break;
     }

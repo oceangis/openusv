@@ -1,5 +1,46 @@
 # Changelog
 
+## [v2.0.0] - 2025-12-30
+
+### 🎉 重大更新 - BNO08x IMU 稳定运行 & 翼帆控制框架
+
+#### BNO08x ExternalAHRS 修复
+- **I2C 设备探测增强**: 添加详细调试日志，便于定位通信问题
+- **probe_device()**: 记录 bus/addr、get_device_ptr 状态、transfer 结果
+- **hal_read()**: 添加 header 原始数据日志，便于协议分析
+
+#### MAVLink 消息修复
+- **MSG_WHEEL_DISTANCE (60) 修复**: 解决 "Sending unknown message (60)" 警告
+  - 问题: 禁用 AP_WHEELENCODER_ENABLED=0 后，消息调度未同步禁用
+  - 修复: GCS_MAVLink_Parameters.cpp 添加 && AP_WHEELENCODER_ENABLED 条件
+
+#### 翼帆控制统一框架 (Sailboat Wingsail Framework)
+- **三种翼帆类型支持**:
+  - WINGSAIL_ROTATION: 舵+翼帆旋转 (控制整个翼帆角度)
+  - WINGSAIL_FLAP: 舵+襟翼 (OpenTransat 方式)
+  - WINGSAIL_FREE: 只控舵 (Sailbuoy 自平衡方式)
+- **统一控制接口**:
+  - get_wingsail_type() - 获取翼帆类型
+  - get_normalized_control() - 归一化控制值 (-1.0 ~ +1.0)
+  - get_steering_gain() - 模式相关舵增益 (ROTATION:0.8, FLAP:1.0, FREE:1.3)
+  - get_steering_correction() - 统一舵修正值
+
+#### INA2xx 电池监控优化
+- **I2C 总线支持**: 支持指定 I2C 总线号
+- **参数优化**: 电池监控参数调整
+
+#### 修改的文件
+- libraries/AP_ExternalAHRS/AP_ExternalAHRS_BNO08x.cpp - 调试日志
+- libraries/GCS_MAVLink/GCS_MAVLink_Parameters.cpp - MSG_WHEEL_DISTANCE 修复
+- Rover/sailboat.h, Rover/sailboat.cpp - 翼帆框架
+- Rover/mode.cpp, Rover/mode_manual.cpp - 舵控制集成
+- libraries/AP_BattMonitor/AP_BattMonitor_INA2xx.* - 电池监控
+- libraries/RC_Channel/RC_Channel.h - RC 通道优化
+
+---
+
+# Changelog
+
 ## [v1.7.0] - 2025-12-29
 
 ### MAVLink 带宽优化 (LoRa 遥测适配)

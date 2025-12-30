@@ -311,7 +311,7 @@ void Mode::calc_throttle(float target_speed, bool avoidance_enabled)
 
     if (g2.sailboat.sail_enabled()) {
         // sailboats use special throttle and mainsail controller
-        g2.sailboat.get_throttle_and_set_mainsail(target_speed, throttle_out);
+        g2.sailboat.get_throttle_and_set_wingsail(target_speed, throttle_out);
     } else {
         // call speed or stop controller
         if (is_zero(target_speed)) {
@@ -500,11 +500,26 @@ void Mode::calc_steering_to_heading(float desired_heading_cd, float rate_max_deg
     set_steering(steering_out * 4500.0f);
 }
 
+
 void Mode::set_steering(float steering_value)
 {
     if (allows_stick_mixing() && g2.stick_mixing > 0) {
         steering_value = channel_steer->stick_mixing((int16_t)steering_value);
     }
+
+    // Apply sailboat steering correction and gain
+    if (g2.sailboat.sail_enabled()) {
+        // Get sailboat steering correction (tacking/backward detection)
+        const float sail_correction = g2.sailboat.get_steering_correction();
+        if (!is_zero(sail_correction)) {
+            // Use sailboat correction when active (tacking or backward)
+            steering_value = sail_correction * 45.0f;  // Convert -100~+100 to -4500~+4500
+        } else {
+            // Apply mode-specific steering gain
+            steering_value *= g2.sailboat.get_steering_gain();
+        }
+    }
+
     g2.motors.set_steering(steering_value);
 }
 

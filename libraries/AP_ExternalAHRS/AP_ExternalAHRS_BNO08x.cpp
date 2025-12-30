@@ -330,8 +330,11 @@ bool AP_ExternalAHRS_BNO08x::shtp_receive_packet()
 
 bool AP_ExternalAHRS_BNO08x::probe_device(uint8_t bus, uint8_t addr)
 {
+    GCS_SEND_TEXT(MAV_SEVERITY_DEBUG, "BNO08x: Probing bus=%d addr=0x%02X", bus, addr);
+
     AP_HAL::OwnPtr<AP_HAL::I2CDevice> probe_dev = hal.i2c_mgr->get_device_ptr(bus, addr);
     if (!probe_dev) {
+        GCS_SEND_TEXT(MAV_SEVERITY_DEBUG, "BNO08x: get_device_ptr failed for 0x%02X", addr);
         return false;
     }
 
@@ -339,7 +342,14 @@ bool AP_ExternalAHRS_BNO08x::probe_device(uint8_t bus, uint8_t addr)
 
     // Try to read 4 bytes (SHTP header)
     uint8_t dummy[4];
-    return probe_dev->transfer(nullptr, 0, dummy, sizeof(dummy));
+    bool result = probe_dev->transfer(nullptr, 0, dummy, sizeof(dummy));
+    if (!result) {
+        GCS_SEND_TEXT(MAV_SEVERITY_DEBUG, "BNO08x: I2C transfer failed for 0x%02X", addr);
+    } else {
+        GCS_SEND_TEXT(MAV_SEVERITY_DEBUG, "BNO08x: Found at 0x%02X, hdr=%02X%02X%02X%02X",
+                      addr, dummy[0], dummy[1], dummy[2], dummy[3]);
+    }
+    return result;
 }
 
 // ============================================================================

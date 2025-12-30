@@ -123,3 +123,9 @@ SR0_EXTRA2       1            # VFR_HUD 1Hz
 SR0_EXTRA3       1            # 电池/水深 1Hz
 SR0_PARAMS       10           # 参数 (仅连接时)
 SR0_ADSB         0            # 禁用ADSB
+
+# WindVane - Airmar Weather Station (NMEA)
+SERIAL2_PROTOCOL 18       # WindVane
+SERIAL2_BAUD     4800     # Airmar 4800 baud
+WNDVN_TYPE       2        # NMEA
+WNDVN_SPEED_TYPE 11       # NMEA

@@ -114,6 +114,10 @@
 #define HAL_HAVE_SERIAL9_PARAMS 0
 #define AP_AIRSPEED_ENABLED 0
 #define AP_ROVER_BALANCEBOT_ENABLED 0
+#define AP_WINDVANE_ENABLED 1
+#define AP_WINDVANE_NMEA_ENABLED 1
+#define DEFAULT_SERIAL2_PROTOCOL SerialProtocol_WindVane
+#define DEFAULT_SERIAL2_BAUD 4800
 
 // SPI buses table
 #define HAL_ESP32_SPI_BUSES \
@@ -130,7 +134,8 @@
 // serial devices table
 #define HAL_ESP32_UART_DEVICES \
    { .port=UART_NUM_0, .rx=GPIO_NUM_44, .tx=GPIO_NUM_43 },\
-   { .port=UART_NUM_1, .rx=GPIO_NUM_18, .tx=GPIO_NUM_17 }
+   { .port=UART_NUM_1, .rx=GPIO_NUM_18, .tx=GPIO_NUM_17 },\
+   { .port=UART_NUM_2, .rx=GPIO_NUM_NC, .tx=GPIO_NUM_NC }
 #define HAL_ESP32_RCOUT { GPIO_NUM_11, GPIO_NUM_45, GPIO_NUM_46, GPIO_NUM_48, GPIO_NUM_13 }
 
 // No SDSPI configuration

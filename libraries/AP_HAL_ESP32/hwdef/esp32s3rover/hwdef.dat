@@ -67,6 +67,8 @@ ESP32_SERIAL  UART_NUM_0  GPIO_NUM_44  GPIO_NUM_43
 # UART1: TX=GPIO18, RX=GPIO17 (GPS)
 # Schematic: GPIO17→GPS-TXD, GPIO18→GPS-RXD
 ESP32_SERIAL  UART_NUM_1  GPIO_NUM_18  GPIO_NUM_17
+# UART2: Weather Station (Airmar NMEA) - GPIO TBD
+ESP32_SERIAL  UART_NUM_2  GPIO_NUM_NC  GPIO_NUM_NC
 
 # I2C bus: SDA=GPIO9, SCL=GPIO10 (BNO08x IMU)
 ESP32_I2CBUS  I2C_NUM_0  GPIO_NUM_9  GPIO_NUM_10  400*KHZ  true  false
@@ -228,3 +230,11 @@ define AP_AIRSPEED_ENABLED 0
 # Balance Bot - Disable for boat (two-wheel balancing robot)
 # ========================================================================
 define AP_ROVER_BALANCEBOT_ENABLED 0
+
+# ========================================================================
+# WindVane Configuration - Airmar Weather Station (NMEA)
+# ========================================================================
+define AP_WINDVANE_ENABLED 1
+define AP_WINDVANE_NMEA_ENABLED 1
+define DEFAULT_SERIAL2_PROTOCOL SerialProtocol_WindVane
+define DEFAULT_SERIAL2_BAUD 4800

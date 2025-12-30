@@ -24,7 +24,7 @@ void ModeManual::update()
     g2.motors.set_walking_height(desired_walking_height);
 
     // set sailboat sails
-    g2.sailboat.set_pilot_desired_mainsail();
+    g2.sailboat.set_pilot_desired_wingsail();
 
     // X-type vectored boats: optional heading assist (ArduSub-style)
     // Only enabled for FRAME_TYPE_BOAT_VECTORED_X

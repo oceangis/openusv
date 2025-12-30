@@ -41,45 +41,65 @@ const AP_Param::GroupInfo RC_Channels::var_info[] = {
     // @Path: RC_Channel.cpp
     AP_SUBGROUPINFO(obj_channels[5], "6_",  6, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
 
+#if NUM_RC_CHANNELS > 6
     // @Group: 7_
     // @Path: RC_Channel.cpp
     AP_SUBGROUPINFO(obj_channels[6], "7_",  7, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
 
+#if NUM_RC_CHANNELS > 7
     // @Group: 8_
     // @Path: RC_Channel.cpp
     AP_SUBGROUPINFO(obj_channels[7], "8_",  8, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
 
+#if NUM_RC_CHANNELS > 8
     // @Group: 9_
     // @Path: RC_Channel.cpp
     AP_SUBGROUPINFO(obj_channels[8], "9_",  9, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
 
+#if NUM_RC_CHANNELS > 9
     // @Group: 10_
     // @Path: RC_Channel.cpp
     AP_SUBGROUPINFO(obj_channels[9], "10_", 10, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
 
+#if NUM_RC_CHANNELS > 10
     // @Group: 11_
     // @Path: RC_Channel.cpp
     AP_SUBGROUPINFO(obj_channels[10], "11_", 11, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
 
+#if NUM_RC_CHANNELS > 11
     // @Group: 12_
     // @Path: RC_Channel.cpp
     AP_SUBGROUPINFO(obj_channels[11], "12_", 12, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
 
+#if NUM_RC_CHANNELS > 12
     // @Group: 13_
     // @Path: RC_Channel.cpp
     AP_SUBGROUPINFO(obj_channels[12], "13_", 13, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
 
+#if NUM_RC_CHANNELS > 13
     // @Group: 14_
     // @Path: RC_Channel.cpp
     AP_SUBGROUPINFO(obj_channels[13], "14_", 14, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
 
+#if NUM_RC_CHANNELS > 14
     // @Group: 15_
     // @Path: RC_Channel.cpp
     AP_SUBGROUPINFO(obj_channels[14], "15_", 15, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
 
+#if NUM_RC_CHANNELS > 15
     // @Group: 16_
     // @Path: RC_Channel.cpp
     AP_SUBGROUPINFO(obj_channels[15], "16_", 16, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
 
     // @Param: _OVERRIDE_TIME
     // @DisplayName: RC override timeout

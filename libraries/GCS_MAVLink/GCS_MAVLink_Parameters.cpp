@@ -281,9 +281,9 @@ static const ap_message STREAM_POSITION_msgs[] = {
 };
 
 static const ap_message STREAM_RAW_CONTROLLER_msgs[] = {
-#if APM_BUILD_TYPE(APM_BUILD_Rover)
+#if APM_BUILD_TYPE(APM_BUILD_Rover) && AP_WHEELENCODER_ENABLED
     MSG_SERVO_OUT,
-#endif  // #if APM_BUILD_TYPE(APM_BUILD_Rover)
+#endif  // #if APM_BUILD_TYPE(APM_BUILD_Rover) && AP_WHEELENCODER_ENABLED
 };
 
 static const ap_message STREAM_RC_CHANNELS_msgs[] = {
@@ -319,9 +319,9 @@ static const ap_message STREAM_EXTRA1_msgs[] = {
 #if HAL_WITH_ESC_TELEM
     MSG_ESC_TELEMETRY,
 #endif
-#if APM_BUILD_TYPE(APM_BUILD_Rover)
+#if APM_BUILD_TYPE(APM_BUILD_Rover) && AP_WHEELENCODER_ENABLED
     MSG_WHEEL_DISTANCE,
-#endif  // APM_BUILD_TYPE(APM_BUILD_Rover)
+#endif  // APM_BUILD_TYPE(APM_BUILD_Rover) && AP_WHEELENCODER_ENABLED
 #if HAL_GENERATOR_ENABLED
     MSG_GENERATOR_STATUS,
 #endif
