@@ -1,5 +1,35 @@
 # Changelog
 
+## [v2.1.0] - 2025-12-30
+
+### BNO08x ExternalAHRS 重大修复
+
+#### ENU→NED 坐标转换修复
+- **问题**: 原四元数转换使用简单分量交换，数学上错误
+- **修复**: 改用欧拉角中间转换，确保姿态数据正确
+  - roll_ned = pitch_enu
+  - pitch_ned = roll_enu  
+  - yaw_ned = π/2 - yaw_enu (航向从东基准转北基准)
+
+#### I2C 通信稳定性增强
+- **问题**: 运行中 I2C 失败时无诊断信息，无法恢复
+- **修复**:
+  - 添加连续失败计数 consecutive_failures
+  - 超过 50 次失败后自动重新初始化 (soft_reset + configure)
+  - 每 10 秒输出统计日志: pkts/err/rst/reinit
+
+#### 新增变量和常量
+- consecutive_failures - I2C 连续失败计数
+- reinit_count - 重新初始化次数
+- MAX_CONSECUTIVE_FAILURES = 50
+- STATS_INTERVAL_MS = 10000
+
+#### 修改的文件
+- libraries/AP_ExternalAHRS/AP_ExternalAHRS_BNO08x.h
+- libraries/AP_ExternalAHRS/AP_ExternalAHRS_BNO08x.cpp
+
+---
+
 ## [v2.0.0] - 2025-12-30
 
 ### 🎉 重大更新 - BNO08x IMU 稳定运行 & 翼帆控制框架

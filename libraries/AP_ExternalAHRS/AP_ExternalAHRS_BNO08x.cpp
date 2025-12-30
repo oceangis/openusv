@@ -73,6 +73,9 @@ AP_ExternalAHRS_BNO08x::AP_ExternalAHRS_BNO08x(AP_ExternalAHRS *frontend, AP_Ext
     , packet_count(0)
     , error_count(0)
     , reset_count(0)
+    , consecutive_failures(0)
+    , last_stats_ms(0)
+    , reinit_count(0)
 {
     // Initialize sequence numbers for all channels
     memset(seq_num, 0, sizeof(seq_num));
@@ -802,22 +805,30 @@ void AP_ExternalAHRS_BNO08x::parse_rotation_vector(const uint8_t *data, uint16_t
     float qx_enu = q_to_float(quat_i, ROTATION_VECTOR_Q);
     float qy_enu = q_to_float(quat_j, ROTATION_VECTOR_Q);
     float qz_enu = q_to_float(quat_k, ROTATION_VECTOR_Q);
-    float qw = q_to_float(quat_real, ROTATION_VECTOR_Q);
+    float qw_enu = q_to_float(quat_real, ROTATION_VECTOR_Q);
 
-    // Convert ENU to NED coordinate system for ArduPilot
-    // NED quaternion: swap x<->y and negate z
-    float qx_ned = qy_enu;   // NED X (North) = ENU Y
-    float qy_ned = qx_enu;   // NED Y (East) = ENU X
-    float qz_ned = -qz_enu;  // NED Z (Down) = -ENU Z (Up)
-
-    // ArduPilot Quaternion: (q1, q2, q3, q4) = (w, x, y, z)
+    // ========== ENU to NED coordinate conversion ==========
+    // Method: Convert via Euler angles for clarity and correctness
+    // ENU: X=East, Y=North, Z=Up;  yaw from North, CCW positive
+    // NED: X=North, Y=East, Z=Down; yaw from North, CW positive
+    
+    // Step 1: Build temporary quaternion and extract ENU euler angles
+    Quaternion q_enu(qw_enu, qx_enu, qy_enu, qz_enu);
+    float roll_enu, pitch_enu, yaw_enu;
+    q_enu.to_euler(roll_enu, pitch_enu, yaw_enu);
+    
+    // Step 2: Convert ENU euler to NED euler
+    // - ENU roll (around East/X) -> NED pitch (around East/Y)
+    // - ENU pitch (around North/Y) -> NED roll (around North/X)
+    // - ENU yaw (CCW from North) -> NED yaw (CW from North) = -yaw_enu
+    float roll_ned = pitch_enu;
+    float pitch_ned = roll_enu;
+    float yaw_ned = M_PI_2 - yaw_enu;  // ENU yaw from East, NED yaw from North
+    
+    // Step 3: Build NED quaternion
     {
         WITH_SEMAPHORE(data_sem);
-        latest_quat[0] = qw;      // w (unchanged)
-        latest_quat[1] = qx_ned;  // x (NED)
-        latest_quat[2] = qy_ned;  // y (NED)
-        latest_quat[3] = qz_ned;  // z (NED)
-        latest_quat.normalize();
+        latest_quat.from_euler(roll_ned, pitch_ned, yaw_ned);
 
         quat_accuracy_rad = q_to_float(accuracy_raw, ROTATION_ACCURACY_Q);
         have_rotation = true;
@@ -854,20 +865,20 @@ void AP_ExternalAHRS_BNO08x::parse_game_rotation_vector(const uint8_t *data, uin
     float qx_enu = q_to_float(quat_i, ROTATION_VECTOR_Q);
     float qy_enu = q_to_float(quat_j, ROTATION_VECTOR_Q);
     float qz_enu = q_to_float(quat_k, ROTATION_VECTOR_Q);
-    float qw = q_to_float(quat_real, ROTATION_VECTOR_Q);
+    float qw_enu = q_to_float(quat_real, ROTATION_VECTOR_Q);
 
-    // Convert ENU to NED
-    float qx_ned = qy_enu;
-    float qy_ned = qx_enu;
-    float qz_ned = -qz_enu;
+    // ENU to NED conversion via Euler angles
+    Quaternion q_enu(qw_enu, qx_enu, qy_enu, qz_enu);
+    float roll_enu, pitch_enu, yaw_enu;
+    q_enu.to_euler(roll_enu, pitch_enu, yaw_enu);
+    
+    float roll_ned = pitch_enu;
+    float pitch_ned = roll_enu;
+    float yaw_ned = M_PI_2 - yaw_enu;  // ENU yaw from East, NED yaw from North
 
     {
         WITH_SEMAPHORE(data_sem);
-        latest_quat[0] = qw;
-        latest_quat[1] = qx_ned;
-        latest_quat[2] = qy_ned;
-        latest_quat[3] = qz_ned;
-        latest_quat.normalize();
+        latest_quat.from_euler(roll_ned, pitch_ned, yaw_ned);
 
         quat_accuracy_rad = 0;  // No accuracy for game rotation vector
         have_rotation = true;
@@ -1082,6 +1093,15 @@ void AP_ExternalAHRS_BNO08x::update_thread()
             continue;
         }
 
+        // Stats output every 10 seconds
+        uint32_t now = AP_HAL::millis();
+        if (now - last_stats_ms >= STATS_INTERVAL_MS) {
+            last_stats_ms = now;
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "BNO08x: pkts=%lu err=%lu rst=%lu reinit=%lu",
+                          (unsigned long)packet_count, (unsigned long)error_count,
+                          (unsigned long)reset_count, (unsigned long)reinit_count);
+        }
+
         // Check for and handle unexpected resets (like Adafruit wasReset)
         if (reset_occurred) {
             WITH_SEMAPHORE(dev->get_semaphore());
@@ -1099,6 +1119,24 @@ void AP_ExternalAHRS_BNO08x::update_thread()
         // Process packet (parsing doesn't need I2C semaphore)
         if (got_packet) {
             process_packet();
+            consecutive_failures = 0;
+        } else {
+            consecutive_failures++;
+            error_count++;
+            
+            if (consecutive_failures >= MAX_CONSECUTIVE_FAILURES) {
+                GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "BNO08x: %lu failures, reinit", (unsigned long)consecutive_failures);
+                consecutive_failures = 0;
+                sensor_initialized = false;
+                
+                hal.scheduler->delay(STARTUP_DELAY_MS);
+                WITH_SEMAPHORE(dev->get_semaphore());
+                if (soft_reset_with_retry(MAX_INIT_ATTEMPTS) && wait_for_reset_complete() && configure_sensors()) {
+                    sensor_initialized = true;
+                    reinit_count++;
+                    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "BNO08x: Reinit OK");
+                }
+            }
         }
 
         // Small delay to match Arduino test code (delay(5) in loop)

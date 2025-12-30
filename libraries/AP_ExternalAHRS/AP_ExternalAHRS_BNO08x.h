@@ -239,6 +239,9 @@ private:
     uint32_t packet_count;
     uint32_t error_count;
     uint32_t reset_count;
+    uint32_t consecutive_failures;      // I2C 连续失败计数
+    uint32_t last_stats_ms;             // 上次输出统计的时间
+    uint32_t reinit_count;              // 重新初始化次数
 
     // Timing constants
     static constexpr uint32_t SENSOR_TIMEOUT_MS = 500;
@@ -247,6 +250,8 @@ private:
     static constexpr uint32_t SOFTRESET_DELAY_MS = 300;  // Delay after soft reset
     static constexpr uint32_t DEFAULT_REPORT_INTERVAL_US = 10000;  // 100Hz (10ms interval = 10000us)
     static constexpr uint8_t MAX_INIT_ATTEMPTS = 5;  // Match Arduino code retry count
+    static constexpr uint32_t MAX_CONSECUTIVE_FAILURES = 50;   // 连续失败50次后重新初始化
+    static constexpr uint32_t STATS_INTERVAL_MS = 10000;       // 每10秒输出一次统计
 };
 
 #endif  // AP_EXTERNAL_AHRS_BNO08X_ENABLED
