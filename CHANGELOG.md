@@ -1,5 +1,54 @@
 # Changelog
 
+## [v2.2.0] - 2026-01-02
+
+### LoRa MAVLink 数传初步完成
+
+#### LoRa SX1268 驱动集成
+- **lora_mavlink 组件**: 完整的 TX/RX 实现
+  - 环形缓冲区 (TX/RX ring buffer)
+  - FreeRTOS 任务调度
+  - DIO1 中断处理
+- **sx126x 驱动配置** (EBYTE E22-400MBL 兼容):
+  - Sync Word: 0x1444 (EBYTE 格式)
+  - OCP: 0x38 (140mA)
+  - TX Ramp: 40us
+  - 433MHz, SF11, BW500kHz, 22dBm
+
+#### SERIAL3 虚拟串口启用
+- **架构**: SERIAL3 → LoRaUARTDriver → lora_mavlink → sx126x → SPI → SX1268
+- **配置更新**:
+  - HAL_UART_NUM_SERIAL_PORTS: 3 → 4
+  - HAL_HAVE_SERIAL3_PARAMS: 0 → 1
+  - DEFAULT_SERIAL3_PROTOCOL: SerialProtocol_MAVLink2
+  - DEFAULT_SERIAL3_BAUD: 57600
+
+#### hwdef.dat LoRa 引脚修复
+- **问题**: SCK/MISO 引脚定义错误 (互换)
+- **修复**:
+  - LORA_PIN_SCK: GPIO_NUM_39 → GPIO_NUM_40
+  - LORA_PIN_MISO: GPIO_NUM_40 → GPIO_NUM_39
+
+#### Storage 调试输出修复
+- **问题**: STORAGEDEBUG 宏启用导致大量 printf 输出
+- **症状**: 参数加载时 UART 阻塞，触发看门狗超时重启 (rst:0xc)
+- **修复**: 注释 #define STORAGEDEBUG 1
+- **注意**: 此修复仅影响调试输出，参数存储功能不受影响
+
+#### 修改的文件
+- components/lora_mavlink/src/lora_mavlink.c - TX/RX 实现
+- components/lora_mavlink/src/sx126x.c - EBYTE 兼容配置
+- libraries/AP_HAL_ESP32/hwdef/esp32s3rover/hwdef.dat - 引脚修复 + SERIAL3
+- libraries/AP_HAL_ESP32/hwdef/hwdef.h - SERIAL3 参数
+- libraries/AP_HAL_ESP32/Storage.cpp - 禁用调试输出
+- main/main.c - LoRa 初始化
+
+#### 已知问题
+- LoRa 收发功能需要实际测试验证
+- Mission Planner 通过 LoRa 连接待测试
+
+---
+
 ## [v2.1.0] - 2025-12-30
 
 ### BNO08x ExternalAHRS 重大修复

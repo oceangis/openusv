@@ -22,6 +22,8 @@
 // LoRa sync word values
 #define SX126X_LORA_SYNC_WORD_PUBLIC      0x3444
 #define SX126X_LORA_SYNC_WORD_PRIVATE     0x1424
+// EBYTE E22 模块使用的 Sync Word (sx126x_set_lora_sync_word(0x14) -> 0x1444)
+#define SX126X_LORA_SYNC_WORD_EBYTE       0x1444
 
 // PA config constants for SX1262
 #define SX1262_PA_DUTY_CYCLE              0x04
@@ -450,6 +452,17 @@ void sx126x_read_buffer(uint8_t *data, size_t len, uint8_t offset)
 }
 
 /**
+ * @brief Wakeup SX126x from sleep (软件唤醒，用于无 RST 引脚的情况)
+ */
+static void sx126x_wakeup(void)
+{
+    // 发送 GetStatus 命令唤醒芯片
+    uint8_t status;
+    sx126x_hal_read_cmd(SX126X_CMD_GET_STATUS, &status, 1);
+    sx126x_hal_delay_ms(10);
+}
+
+/**
  * @brief Initialize SX1262 for LoRa operation
  * @param config LoRa configuration
  * @return true on success
@@ -465,8 +478,11 @@ bool sx126x_init(const lora_config_t *config)
         return false;
     }
 
-    // Reset the radio
+    // Reset the radio (or wait if no RST pin)
     sx126x_hal_reset();
+
+    // 软件唤醒 (因为 RST 引脚未连接)
+    sx126x_wakeup();
 
     // Wait for chip ready
     if (!sx126x_hal_wait_busy(100)) {
@@ -507,16 +523,31 @@ bool sx126x_init(const lora_config_t *config)
     int8_t tx_power = config ? config->tx_power : LORA_TX_POWER;
     sx126x_set_pa_config(tx_power);
 
+    // Set OCP (过流保护) - 与 EBYTE 官方 demo 一致
+    // 0x38 = 140mA (SX1262 推荐值为 140mA @ 22dBm)
+    uint8_t ocp_val = 0x38;
+    sx126x_hal_write_reg(SX126X_REG_OCP_CONFIGURATION, &ocp_val, 1);
+
     // Set TX parameters
-    sx126x_set_tx_params(tx_power, SX126X_RAMP_200_US);
+    sx126x_set_tx_params(tx_power, SX126X_RAMP_40_US);  // 40us ramp 与测试一致
 
     // Set frequency
     sx126x_set_rf_frequency(freq);
 
     // Set modulation parameters
     uint8_t sf = config ? config->spreading_factor : LORA_SF;
-    uint8_t bw = config ? bandwidth_to_reg(config->bandwidth == 0 ? 125 :
-                         (config->bandwidth == 1 ? 250 : 500)) : SX126X_LORA_BW_125;
+    // Bandwidth: config->bandwidth is 0=125kHz, 1=250kHz, 2=500kHz
+    uint8_t bw;
+    if (config) {
+        switch (config->bandwidth) {
+            case 0:  bw = SX126X_LORA_BW_125; break;
+            case 1:  bw = SX126X_LORA_BW_250; break;
+            case 2:
+            default: bw = SX126X_LORA_BW_500; break;
+        }
+    } else {
+        bw = SX126X_LORA_BW_500;  // Default 500kHz for E22-400MBL compatibility
+    }
     uint8_t cr = config ? config->coding_rate : SX126X_LORA_CR_4_5;
 
     // Calculate LDRO: required if symbol time > 16ms
@@ -533,8 +564,10 @@ bool sx126x_init(const lora_config_t *config)
     uint8_t crc = config ? (config->crc_enable ? 1 : 0) : 1;
     sx126x_set_packet_params(preamble, 0, 255, crc, 0);
 
-    // Set sync word (private network)
-    sx126x_set_sync_word(SX126X_LORA_SYNC_WORD_PRIVATE);
+    // Set sync word - 使用 EBYTE E22 模块的 Sync Word (0x1444)
+    // EBYTE 调用 sx126x_set_lora_sync_word(0x14) 实际产生 0x1444
+    // 经测试验证与 E22-400MBL-SC 评估板通信正常
+    sx126x_set_sync_word(SX126X_LORA_SYNC_WORD_EBYTE);
 
     // Configure IRQs on DIO1
     uint16_t irq_mask = SX126X_IRQ_TX_DONE | SX126X_IRQ_RX_DONE |

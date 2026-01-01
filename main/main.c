@@ -15,7 +15,7 @@
 // 功能开关 - 调试时可禁用某些组件
 // ============================================================================
 #define ENABLE_WIFI_CONFIG  0   // 设为1启用WiFi配置系统
-#define ENABLE_LORA_MAVLINK 0   // 设为1启用LoRa MAVLink数传
+#define ENABLE_LORA_MAVLINK 1   // 设为1启用LoRa MAVLink数传
 
 #if ENABLE_WIFI_CONFIG
 #include "wifi_config.h"
@@ -71,7 +71,7 @@ void app_main(void)
         .frequency = LORA_FREQ_HZ,
         .tx_power = LORA_TX_POWER,
         .spreading_factor = LORA_SF,
-        .bandwidth = 0,         // 125kHz
+        .bandwidth = 2,         // 500kHz (0=125k, 1=250k, 2=500k) - 匹配 E22-400MBL
         .coding_rate = 1,       // 4/5
         .preamble_len = 8,
         .crc_enable = true
@@ -79,6 +79,16 @@ void app_main(void)
     if (lora_mavlink_init(&lora_cfg)) {
         ESP_LOGI(TAG, "LoRa MAVLink数传启动成功 (%.3f MHz, SF%d, %d dBm)",
                  lora_cfg.frequency / 1000000.0, lora_cfg.spreading_factor, lora_cfg.tx_power);
+
+        // 发送测试包验证通信 (EBYTE 格式)
+        for (int i = 1; i <= 3; i++) {
+            char test_msg[32];
+            int len = snprintf(test_msg, sizeof(test_msg), "TX.003.%03d", i);
+            lora_mavlink_write((uint8_t*)test_msg, len);
+            ESP_LOGI(TAG, "LoRa 测试包 #%d: %s", i, test_msg);
+            vTaskDelay(pdMS_TO_TICKS(1500));  // 等待发送完成
+        }
+        ESP_LOGI(TAG, "LoRa 测试完成");
     } else {
         ESP_LOGW(TAG, "LoRa MAVLink数传启动失败，继续启动ArduPilot...");
     }

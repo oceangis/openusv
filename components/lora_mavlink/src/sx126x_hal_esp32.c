@@ -18,12 +18,12 @@
 static spi_device_handle_t spi_handle = NULL;
 static bool hal_initialized = false;
 
-// Pin definitions from hwdef
+// Pin definitions from lora_mavlink.h (matching schematic)
 static const gpio_num_t PIN_SCK  = LORA_PIN_SCK;
 static const gpio_num_t PIN_MISO = LORA_PIN_MISO;
 static const gpio_num_t PIN_MOSI = LORA_PIN_MOSI;
 static const gpio_num_t PIN_CS   = LORA_PIN_CS;
-static const gpio_num_t PIN_RST  = LORA_PIN_RST;
+static const int PIN_RST         = LORA_PIN_RST;  // Can be -1 if not connected
 static const gpio_num_t PIN_BUSY = LORA_PIN_BUSY;
 static const gpio_num_t PIN_DIO1 = LORA_PIN_DIO1;
 
@@ -33,15 +33,22 @@ bool sx126x_hal_init(void)
         return true;
     }
 
-    // Configure GPIO pins
+    // Configure GPIO pins - CS is always required
     gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << PIN_RST) | (1ULL << PIN_CS),
+        .pin_bit_mask = (1ULL << PIN_CS),
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE
     };
     gpio_config(&io_conf);
+
+    // Configure RST pin only if connected (PIN_RST >= 0)
+    if (PIN_RST >= 0) {
+        io_conf.pin_bit_mask = (1ULL << PIN_RST);
+        gpio_config(&io_conf);
+        gpio_set_level((gpio_num_t)PIN_RST, 1);
+    }
 
     io_conf.pin_bit_mask = (1ULL << PIN_BUSY) | (1ULL << PIN_DIO1);
     io_conf.mode = GPIO_MODE_INPUT;
@@ -50,7 +57,6 @@ bool sx126x_hal_init(void)
 
     // Set initial pin states
     gpio_set_level(PIN_CS, 1);
-    gpio_set_level(PIN_RST, 1);
 
     // Configure SPI bus
     spi_bus_config_t bus_cfg = {
@@ -106,10 +112,17 @@ void sx126x_hal_deinit(void)
 
 void sx126x_hal_reset(void)
 {
-    gpio_set_level(PIN_RST, 0);
-    sx126x_hal_delay_ms(10);
-    gpio_set_level(PIN_RST, 1);
-    sx126x_hal_delay_ms(20);
+    // Hardware reset only if RST pin is connected
+    if (PIN_RST >= 0) {
+        gpio_set_level((gpio_num_t)PIN_RST, 0);
+        sx126x_hal_delay_ms(10);
+        gpio_set_level((gpio_num_t)PIN_RST, 1);
+        sx126x_hal_delay_ms(20);
+    } else {
+        // No hardware reset pin - just wait for chip to be ready
+        // The chip will be reset via software command in sx126x_init()
+        sx126x_hal_delay_ms(50);
+    }
 }
 
 bool sx126x_hal_wait_busy(uint32_t timeout_ms)

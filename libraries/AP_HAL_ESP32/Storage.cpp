@@ -85,6 +85,7 @@ void Storage::_storage_open(void)
 
     // load from storage backend
     _flash_load();
+    printf("Storage init: _use_empty_storage=%d\n", _use_empty_storage ? 1 : 0);
     _initialised = true;
 }
 

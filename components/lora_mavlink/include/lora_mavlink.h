@@ -16,40 +16,44 @@
 extern "C" {
 #endif
 
-// LoRa configuration from hwdef.dat
+// LoRa GPIO pin definitions (matching schematic SCH_无人船控制板 lite_2025-12-15)
+// SX1268ZTR4 connected via SPI2
+// 重要：根据原理图验证，SCK=IO40, MISO=IO39 (之前写反了!)
 #ifndef LORA_PIN_SCK
-#define LORA_PIN_SCK     35
+#define LORA_PIN_SCK     40    // IO40 - LORA-SCK
 #endif
 #ifndef LORA_PIN_MISO
-#define LORA_PIN_MISO    36
+#define LORA_PIN_MISO    39    // IO39 - LORA-MISO
 #endif
 #ifndef LORA_PIN_MOSI
-#define LORA_PIN_MOSI    37
+#define LORA_PIN_MOSI    41    // IO41 - LORA-MOSI
 #endif
 #ifndef LORA_PIN_CS
-#define LORA_PIN_CS      39
+#define LORA_PIN_CS      42    // IO42 - LORA-SEL
 #endif
 #ifndef LORA_PIN_RST
-#define LORA_PIN_RST     42
+#define LORA_PIN_RST     -1    // RST not connected to GPIO (use software reset)
 #endif
 #ifndef LORA_PIN_BUSY
-#define LORA_PIN_BUSY    40
+#define LORA_PIN_BUSY    2     // IO2 - BUSY
 #endif
 #ifndef LORA_PIN_DIO1
-#define LORA_PIN_DIO1    41
+#define LORA_PIN_DIO1    1     // IO1 - DIO1
 #endif
 
+// LoRa RF parameters - matched with E22-400MBL-SC evaluation kit
+// E22-400MBL defaults: SF11, BW500, CR4/5, 433MHz
 #ifndef LORA_FREQ_HZ
-#define LORA_FREQ_HZ     433000000
+#define LORA_FREQ_HZ     433000000   // 433 MHz (E22-400M series)
 #endif
 #ifndef LORA_TX_POWER
-#define LORA_TX_POWER    20
+#define LORA_TX_POWER    22          // 22 dBm (max for SX1268)
 #endif
 #ifndef LORA_SF
-#define LORA_SF          8
+#define LORA_SF          11          // SF11 - match E22-400MBL default
 #endif
 #ifndef LORA_BW
-#define LORA_BW          125
+#define LORA_BW          500         // 500 kHz - match E22-400MBL default
 #endif
 
 // Buffer sizes

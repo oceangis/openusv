@@ -366,15 +366,22 @@ bool lora_mavlink_init(const lora_config_t *config)
 
     ESP_LOGI(TAG, "Initializing LoRa MAVLink interface");
 
-    // Set default config
+    // Set default config - matched with E22-400MBL-SC evaluation kit
     if (config) {
         memcpy(&lora_ctx.config, config, sizeof(lora_config_t));
     } else {
-        lora_ctx.config.frequency = LORA_FREQ_HZ;
-        lora_ctx.config.tx_power = LORA_TX_POWER;
-        lora_ctx.config.spreading_factor = LORA_SF;
+        lora_ctx.config.frequency = LORA_FREQ_HZ;       // 433 MHz
+        lora_ctx.config.tx_power = LORA_TX_POWER;       // 22 dBm
+        lora_ctx.config.spreading_factor = LORA_SF;     // SF11
+        // Bandwidth: 0=125kHz, 1=250kHz, 2=500kHz
+        #if LORA_BW == 500
+        lora_ctx.config.bandwidth = 2;  // 500kHz - E22-400MBL default
+        #elif LORA_BW == 250
+        lora_ctx.config.bandwidth = 1;  // 250kHz
+        #else
         lora_ctx.config.bandwidth = 0;  // 125kHz
-        lora_ctx.config.coding_rate = 1;  // 4/5
+        #endif
+        lora_ctx.config.coding_rate = 1;  // 4/5 (CR4/5)
         lora_ctx.config.preamble_len = 8;
         lora_ctx.config.crc_enable = true;
     }
