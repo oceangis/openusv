@@ -1,0 +1,69 @@
+name: ESP32 Build Check
+
+on:
+  push:
+    branches: [master, main, develop]
+    paths:
+      - 'main/**'
+      - 'libraries/**'
+      - 'Rover/**'
+      - 'components/**'
+      - 'CMakeLists.txt'
+      - 'sdkconfig*'
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'main/**'
+      - 'libraries/**'
+      - 'Rover/**'
+      - 'components/**'
+      - 'CMakeLists.txt'
+      - 'sdkconfig*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ESP-IDF Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup ESP-IDF
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5
+          target: esp32s3
+
+      - name: Build project
+        run: |
+          idf.py build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: esp32-firmware
+          path: |
+            build/*.bin
+            build/*.elf
+            build/bootloader/*.bin
+            build/partition_table/*.bin
+          retention-days: 7
+
+      - name: Report binary sizes
+        run: |
+          echo "## Firmware Size Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Binary | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|------|" >> $GITHUB_STEP_SUMMARY
+          for bin in build/*.bin; do
+            if [ -f "$bin" ]; then
+              size=$(stat -c%s "$bin" 2>/dev/null || stat -f%z "$bin")
+              name=$(basename "$bin")
+              echo "| $name | $(numfmt --to=iec $size) |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done

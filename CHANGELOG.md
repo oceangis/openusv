@@ -1,5 +1,86 @@
 # Changelog
 
+## [v2.4.0] - 2026-01-02
+
+### USV 帆船仿真测试框架
+
+#### Phase 1: C++ SITL 仿真器 (simulation/)
+- **SIM_Sailboat_USV**: 完整的物理仿真引擎
+  - 三种翼帆控制模式: ROTATION, FLAP, FREE
+  - 气动升力/阻力曲线 (18点查表)
+  - 船体水动力学
+  - 波浪效应 (横摇/纵摇/升沉)
+  - 潮流/海流模拟
+- **环境参数**: 蒲福风级 (0-12), 道格拉斯海况 (0-9)
+- **预设场景**: calm_sea, moderate_wind, storm, tide_current, upwind_test
+
+#### Phase 2: Python 测试框架 (tests/sitl/)
+- **sailboat_sim.py**: 纯 Python 物理模拟器
+- **测试类别**: upwind_tacking, wingsail_modes, storm_stability
+- **报告格式**: HTML/JSON/Markdown
+
+#### Phase 3: GitHub Actions CI
+- **sailboat-tests.yml**: Python 测试自动化
+- **esp32-build.yml**: ESP32 固件编译检查
+
+---
+
+## [v2.3.0] - 2026-01-02
+# Changelog
+
+## [v2.4.0] - 2026-01-02
+
+### USV 帆船仿真测试框架
+
+#### Phase 1: C++ SITL 仿真器 (simulation/)
+- **SIM_Sailboat_USV**: 完整的物理仿真引擎
+  - 三种翼帆控制模式: ROTATION, FLAP, FREE
+  - 气动升力/阻力曲线 (18点查表)
+  - 船体水动力学
+  - 波浪效应 (横摇/纵摇/升沉)
+  - 潮流/海流模拟
+- **环境参数**: 蒲福风级 (0-12), 道格拉斯海况 (0-9)
+- **预设场景**: calm_sea, moderate_wind, storm, tide_current, upwind_test
+
+#### Phase 2: Python 测试框架 (tests/sitl/)
+- **sailboat_sim.py**: 纯 Python 物理模拟器
+- **测试类别**: upwind_tacking, wingsail_modes, storm_stability
+- **报告格式**: HTML/JSON/Markdown
+
+#### Phase 3: GitHub Actions CI
+- **sailboat-tests.yml**: Python 测试自动化
+- **esp32-build.yml**: ESP32 固件编译检查
+
+---
+
+## [v2.3.0] - 2026-01-02
+# Changelog
+
+## [v2.4.0] - 2026-01-02
+
+### USV 帆船仿真测试框架
+
+#### Phase 1: C++ SITL 仿真器 (simulation/)
+- **SIM_Sailboat_USV**: 完整的物理仿真引擎
+  - 三种翼帆控制模式: ROTATION, FLAP, FREE
+  - 气动升力/阻力曲线 (18点查表)
+  - 船体水动力学
+  - 波浪效应 (横摇/纵摇/升沉)
+  - 潮流/海流模拟
+- **环境参数**: 蒲福风级 (0-12), 道格拉斯海况 (0-9)
+- **预设场景**: calm_sea, moderate_wind, storm, tide_current, upwind_test
+
+#### Phase 2: Python 测试框架 (tests/sitl/)
+- **sailboat_sim.py**: 纯 Python 物理模拟器
+- **测试类别**: upwind_tacking, wingsail_modes, storm_stability
+- **报告格式**: HTML/JSON/Markdown
+
+#### Phase 3: GitHub Actions CI
+- **sailboat-tests.yml**: Python 测试自动化
+- **esp32-build.yml**: ESP32 固件编译检查
+
+---
+
 ## [v2.3.0] - 2026-01-02
 
 ### 修复参数持久化关键BUG
