@@ -1,5 +1,50 @@
 # Changelog
 
+## [v2.3.0] - 2026-01-02
+
+### 修复参数持久化关键BUG
+
+#### 关键修复: current_sector 设置错误
+- **问题**: AP_FlashStorage::init() 从 Sector 1 加载数据后，current_sector 仍为 0
+- **后果**: 新参数写入 Sector 0，重启后加载 Sector 1 旧数据，导致参数丢失
+- **根因分析**:
+  - Sector 0: state=1 (AVAILABLE)
+  - Sector 1: state=2 (IN_USE) ← 包含有效数据
+  - 加载 Sector 1 数据成功，但 current_sector 未更新
+  - 新写入进入 Sector 0，重启后又加载 Sector 1 的旧数据
+- **修复**: 在 load_sector() 循环中记录 IN_USE 的 sector，加载完成后正确设置 current_sector
+
+#### 诊断增强
+- **AP_FlashStorage.cpp**:
+  - 添加 sector header 原始数据输出
+  - 添加 signature 验证和 state 状态日志
+  - 添加 found_in_use, last_in_use_sector 决策日志
+  - 添加 FINAL: current_sector 最终确认日志
+- **Storage.cpp**:
+  - 添加 flash 分区前 32 字节诊断输出
+  - 添加 flash_write 成功/失败统计
+- **AP_Param.cpp**:
+  - 添加 eeprom_write_check 调用统计
+
+#### 构造函数初始化
+- 显式初始化成员变量: current_sector, write_offset, reserved_space, write_error, in_switch_full_sector
+- 避免未定义初始值导致的潜在问题
+
+#### 修改的文件
+- libraries/AP_FlashStorage/AP_FlashStorage.cpp - 关键修复 + 诊断日志
+- libraries/AP_HAL_ESP32/Storage.cpp - flash 内容诊断
+- libraries/AP_Param/AP_Param.cpp - 参数写入统计
+
+#### 验证方法
+启动日志应显示:
+```
+DEBUG: found_in_use=1, last_in_use_sector=1 (before set)
+Setting current_sector=1 (IN_USE sector)
+FINAL: current_sector=1, write_offset=xxxx
+```
+
+---
+
 ## [v2.2.0] - 2026-01-02
 
 ### LoRa MAVLink 数传初步完成
