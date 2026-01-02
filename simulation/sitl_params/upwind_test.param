@@ -1,0 +1,34 @@
+# USV Sailboat Simulation Parameters - Upwind Tacking Test
+# Beaufort 4, Sea State 3
+# Specifically designed to test tacking algorithm
+
+# Wind Parameters
+SIM_WIND_SPD        7.0         # Wind speed (m/s) - Moderate breeze
+SIM_WIND_DIR        0           # Wind from North (target waypoint is North)
+SIM_WIND_TURB       0.12        # Moderate turbulence
+SIM_WIND_GUST       1.25        # Light gusts
+
+# Wave Parameters
+SIM_WAVE_ENABLE     1           # Enable waves
+SIM_WAVE_AMP        0.8         # Wave height 0.8m
+SIM_WAVE_LENGTH     12.0        # Medium wavelength
+SIM_WAVE_DIR        0           # Waves from North (aligned with wind)
+SIM_WAVE_SPEED      1.2         # Moderate speed
+
+# Tide/Current
+SIM_TIDE_DIR        0           # No cross-current
+SIM_TIDE_SPEED      0.0
+
+# Sailboat Parameters - Optimized for upwind
+SAIL_ENABLE         1
+SAIL_WING_TYPE      1           # FLAP mode (best for upwind)
+SAIL_ANGLE_IDEAL    22          # Slightly tighter angle
+SAIL_ANGLE_MAX      35          # Reduced max for upwind efficiency
+SAIL_NO_GO_ANGLE    42          # Tighter no-go for aggressive tacking
+SAIL_FLAP_MAX       16
+SAIL_FLAP_NORM      12          # Higher normal flap for upwind power
+SAIL_FLAP_CRIT      7           # Critical angle for upwind detection
+SAIL_XTRACK_MAX     8           # Tighter cross-track for more frequent tacks
+
+# Tacking behavior
+SAIL_USE_MOTOR      1           # Motor assist for tacking

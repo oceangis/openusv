@@ -1,0 +1,30 @@
+# USV Sailboat Simulation Parameters - Moderate Wind
+# Beaufort 4-5, Sea State 3-4
+# Good sailing conditions with some challenge
+
+# Wind Parameters
+SIM_WIND_SPD        8.0         # Wind speed (m/s) - Fresh breeze
+SIM_WIND_DIR        45          # Wind from NE
+SIM_WIND_TURB       0.15        # Moderate turbulence
+SIM_WIND_GUST       1.3         # Occasional gusts
+
+# Wave Parameters
+SIM_WAVE_ENABLE     1           # Enable waves
+SIM_WAVE_AMP        1.0         # Wave height 1.0m (slight to moderate)
+SIM_WAVE_LENGTH     15.0        # Medium wavelength
+SIM_WAVE_DIR        45          # Waves from NE (aligned with wind)
+SIM_WAVE_SPEED      1.5         # Moderate wave speed
+
+# Tide/Current
+SIM_TIDE_DIR        90          # Current from East
+SIM_TIDE_SPEED      0.3         # Light current
+
+# Sailboat Parameters
+SAIL_ENABLE         1
+SAIL_WING_TYPE      1           # FLAP mode
+SAIL_ANGLE_IDEAL    25
+SAIL_ANGLE_MAX      40
+SAIL_NO_GO_ANGLE    45
+SAIL_FLAP_MAX       16
+SAIL_FLAP_NORM      10
+SAIL_HEEL_MAX       15

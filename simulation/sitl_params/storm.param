@@ -1,0 +1,29 @@
+# USV Sailboat Simulation Parameters - Storm Conditions
+# Beaufort 8-9, Sea State 5-6
+# Extreme conditions for stress testing
+
+# Wind Parameters
+SIM_WIND_SPD        20.0        # Wind speed (m/s) - Gale
+SIM_WIND_DIR        315         # Wind from NW
+SIM_WIND_TURB       0.35        # High turbulence
+SIM_WIND_GUST       1.8         # Strong gusts (up to 36 m/s)
+
+# Wave Parameters
+SIM_WAVE_ENABLE     2           # Enable waves with heave
+SIM_WAVE_AMP        4.0         # Wave height 4.0m (rough)
+SIM_WAVE_LENGTH     50.0        # Long wavelength
+SIM_WAVE_DIR        315         # Waves from NW
+SIM_WAVE_SPEED      4.0         # Fast wave propagation
+
+# Tide/Current
+SIM_TIDE_DIR        180         # Current from South
+SIM_TIDE_SPEED      1.5         # Strong current
+
+# Sailboat Parameters - Conservative for storm
+SAIL_ENABLE         1
+SAIL_WING_TYPE      2           # FREE mode (self-balancing for safety)
+SAIL_ANGLE_IDEAL    15          # Reduced angle
+SAIL_ANGLE_MAX      25          # Limited max
+SAIL_NO_GO_ANGLE    60          # Wider no-go zone
+SAIL_HEEL_MAX       10          # Stricter heel limit
+SAIL_WNDSPD_MIN     25          # Use motor below 25 m/s (never in storm)

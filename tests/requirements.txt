@@ -1,0 +1,10 @@
+# USV Sailboat Test Framework Requirements
+# Install with: pip install -r requirements.txt
+
+# No external dependencies required for basic tests
+# The test framework uses only Python standard library
+
+# Optional dependencies for extended functionality:
+# matplotlib>=3.5.0  # For trajectory plotting
+# numpy>=1.21.0      # For advanced data analysis
+# pymavlink>=2.4.0   # For MAVLink hardware testing

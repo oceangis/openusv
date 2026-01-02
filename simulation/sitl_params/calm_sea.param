@@ -1,0 +1,29 @@
+# USV Sailboat Simulation Parameters - Calm Sea
+# Beaufort 2-3, Sea State 1-2
+# Ideal conditions for initial testing and calibration
+
+# Wind Parameters
+SIM_WIND_SPD        3.0         # Wind speed (m/s) - Light breeze
+SIM_WIND_DIR        0           # Wind from North
+SIM_WIND_TURB       0.05        # Low turbulence
+SIM_WIND_GUST       1.1         # Minimal gusts
+
+# Wave Parameters
+SIM_WAVE_ENABLE     1           # Enable waves
+SIM_WAVE_AMP        0.1         # Wave height 0.1m (calm rippled)
+SIM_WAVE_LENGTH     5.0         # Short wavelength
+SIM_WAVE_DIR        0           # Waves from North
+SIM_WAVE_SPEED      0.3         # Slow wave speed
+
+# Tide/Current
+SIM_TIDE_DIR        0           # No current
+SIM_TIDE_SPEED      0.0
+
+# Sailboat Parameters
+SAIL_ENABLE         1
+SAIL_WING_TYPE      1           # FLAP mode
+SAIL_ANGLE_IDEAL    25
+SAIL_ANGLE_MAX      40
+SAIL_NO_GO_ANGLE    45
+SAIL_FLAP_MAX       16
+SAIL_FLAP_NORM      10

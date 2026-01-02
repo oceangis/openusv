@@ -1,0 +1,32 @@
+# USV Sailboat Simulation Parameters - Strong Tide/Current
+# Beaufort 3-4, Sea State 2-3
+# Testing navigation in strong currents
+
+# Wind Parameters
+SIM_WIND_SPD        5.0         # Wind speed (m/s) - Gentle breeze
+SIM_WIND_DIR        0           # Wind from North
+SIM_WIND_TURB       0.1         # Low turbulence
+SIM_WIND_GUST       1.2         # Light gusts
+
+# Wave Parameters
+SIM_WAVE_ENABLE     1           # Enable waves
+SIM_WAVE_AMP        0.5         # Wave height 0.5m (smooth)
+SIM_WAVE_LENGTH     10.0        # Short wavelength
+SIM_WAVE_DIR        90          # Waves from East (cross-current)
+SIM_WAVE_SPEED      0.8         # Slow waves
+
+# Tide/Current - Strong!
+SIM_TIDE_DIR        270         # Current from West (opposing some headings)
+SIM_TIDE_SPEED      2.0         # Strong current (2 m/s = ~4 knots)
+
+# Sailboat Parameters
+SAIL_ENABLE         1
+SAIL_WING_TYPE      1           # FLAP mode
+SAIL_ANGLE_IDEAL    25
+SAIL_ANGLE_MAX      40
+SAIL_NO_GO_ANGLE    45
+SAIL_FLAP_MAX       16
+SAIL_FLAP_NORM      10
+
+# Motor assist for fighting current
+SAIL_USE_MOTOR      1           # Motor assist enabled
