@@ -153,6 +153,14 @@ uint16_t AP_Param::_frame_type_flags;
 // write to EEPROM
 void AP_Param::eeprom_write_check(const void *ptr, uint16_t ofs, uint8_t size)
 {
+    // 参数保存诊断日志
+    static uint32_t eeprom_write_count = 0;
+    eeprom_write_count++;
+    if (eeprom_write_count <= 10 || (eeprom_write_count % 100) == 0) {
+        printf("AP_Param::eeprom_write_check: ofs=%u size=%u count=%lu\n",
+               ofs, size, (unsigned long)eeprom_write_count);
+    }
+
     _storage.write_block(ofs, ptr, size);
 #if AP_PARAM_STORAGE_BAK_ENABLED
     _storage_bak.write_block(ofs, ptr, size);

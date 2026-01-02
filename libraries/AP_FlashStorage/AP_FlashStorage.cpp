@@ -29,6 +29,17 @@
 #define debug(fmt, args...)  do { } while(0)
 #endif
 
+// 诊断辅助函数：打印十六进制数据
+static void debug_hex(const char* prefix, const uint8_t* data, size_t len) {
+#if FLASHSTORAGE_DEBUG
+    printf("%s: ", prefix);
+    for (size_t i = 0; i < len && i < 16; i++) {
+        printf("%02X ", data[i]);
+    }
+    printf("\n");
+#endif
+}
+
 // constructor.
 AP_FlashStorage::AP_FlashStorage(uint8_t *_mem_buffer,
                                  uint32_t _flash_sector_size,
@@ -41,12 +52,19 @@ AP_FlashStorage::AP_FlashStorage(uint8_t *_mem_buffer,
     flash_write(_flash_write),
     flash_read(_flash_read),
     flash_erase(_flash_erase),
-    flash_erase_ok(_flash_erase_ok) {}
+    flash_erase_ok(_flash_erase_ok),
+    current_sector(0),
+    write_offset(0),
+    reserved_space(0),
+    write_error(false),
+    in_switch_full_sector(false) {}
 
 // initialise storage
 bool AP_FlashStorage::init(void)
 {
     debug("running init()\n");
+    debug("  storage_size=%u, flash_sector_size=%lu\n", storage_size, (unsigned long)flash_sector_size);
+    debug("  expected signature=0x%08lX\n", (unsigned long)signature);
 
     // start with empty memory buffer
     memset(mem_buffer, 0, storage_size);
@@ -57,18 +75,26 @@ bool AP_FlashStorage::init(void)
     // read headers and possibly initialise if bad signature
     for (uint8_t i=0; i<2; i++) {
         if (!flash_read(i, 0, (uint8_t *)&header[i], sizeof(header[i]))) {
+            debug("  ERROR: flash_read sector %u failed!\n", i);
             return false;
         }
+        debug_hex("  sector header raw", (const uint8_t*)&header[i], sizeof(header[i]));
+
         bool bad_header = !header[i].signature_ok();
         enum SectorState state = header[i].get_state();
+
+        debug("  sector[%u]: signature_ok=%d, state=%d\n", i, !bad_header, (int)state);
+
         if (state != SECTOR_STATE_AVAILABLE &&
             state != SECTOR_STATE_IN_USE &&
             state != SECTOR_STATE_FULL) {
+            debug("  sector[%u]: invalid state %d, marking as bad_header\n", i, (int)state);
             bad_header = true;
         }
 
         // initialise if bad header
         if (bad_header) {
+            debug("  BAD HEADER detected in sector %u, calling erase_all()!\n", i);
             return erase_all();
         }
     }
@@ -77,8 +103,11 @@ bool AP_FlashStorage::init(void)
     enum SectorState states[2] {header[0].get_state(), header[1].get_state()};
     uint8_t first_sector;
 
+    debug("  states[0]=%d, states[1]=%d\n", (int)states[0], (int)states[1]);
+
     if (states[0] == states[1]) {
         if (states[0] != SECTOR_STATE_AVAILABLE) {
+            debug("  Both sectors have same non-AVAILABLE state, calling erase_all()!\n");
             return erase_all();
         }
         first_sector = 0;
@@ -95,25 +124,60 @@ bool AP_FlashStorage::init(void)
         first_sector = 0;
     }
 
+    debug("  first_sector=%u\n", first_sector);
+
     // load data from any current sectors
+    // 同时记录最后一个 IN_USE 的 sector，用于设置 current_sector
+    uint8_t last_in_use_sector = 0;
+    bool found_in_use = false;
+
     for (uint8_t i=0; i<2; i++) {
         uint8_t sector = (first_sector + i) & 1;
         if (states[sector] == SECTOR_STATE_IN_USE ||
             states[sector] == SECTOR_STATE_FULL) {
+            debug("  loading sector %u (state=%d)...\n", sector, (int)states[sector]);
             if (!load_sector(sector)) {
+                debug("  load_sector(%u) FAILED, calling erase_all()!\n", sector);
                 return erase_all();
+            }
+            debug("  load_sector(%u) OK, write_offset=%lu\n", sector, (unsigned long)write_offset);
+
+            // 记录 IN_USE 的 sector，这是我们应该继续写入的 sector
+            if (states[sector] == SECTOR_STATE_IN_USE) {
+                last_in_use_sector = sector;
+                found_in_use = true;
             }
         }
     }
 
+    // ========== 关键修复 START ==========
+    // 确保 current_sector 总是被正确设置
+    debug("  DEBUG: found_in_use=%d, last_in_use_sector=%u (before set)\n",
+          (int)found_in_use, last_in_use_sector);
+
+    if (found_in_use) {
+        current_sector = last_in_use_sector;
+        debug("  Setting current_sector=%u (IN_USE sector)\n", current_sector);
+    } else {
+        // 如果没有找到 IN_USE sector，使用 first_sector
+        // 这种情况下两个 sector 都是 AVAILABLE
+        current_sector = first_sector;
+        debug("  No IN_USE sector, setting current_sector=%u (default)\n", current_sector);
+    }
+    debug("  VERIFY: current_sector=%u (before FULL check)\n", current_sector);
+    // ========== 关键修复 END ==========
+
     // clear any write error
     write_error = false;
     reserved_space = 0;
-    
+
     // if the first sector is full then write out all data so we can erase it
     if (states[first_sector] == SECTOR_STATE_FULL) {
+        debug("  first sector is FULL, writing all to other sector\n");
         current_sector = first_sector ^ 1;
+        debug("  OVERRIDE: current_sector=%u (FULL sector handling)\n", current_sector);
         if (!write_all()) {
+            debug("  write_all() FAILED, calling erase_all()!\n");
             return erase_all();
         }
     }
@@ -121,14 +185,21 @@ bool AP_FlashStorage::init(void)
     // erase any sectors marked full
     for (uint8_t i=0; i<2; i++) {
         if (states[i] == SECTOR_STATE_FULL) {
+            debug("  erasing FULL sector %u\n", i);
             if (!erase_sector(i, true)) {
+                debug("  erase_sector(%u) FAILED!\n", i);
                 return false;
             }
         }
     }
 
     reserved_space = 0;
-    
+
+    debug("  FINAL: current_sector=%u, write_offset=%lu\n",
+          current_sector, (unsigned long)write_offset);
+    debug("  init() complete: current_sector=%u, write_offset=%lu\n",
+          current_sector, (unsigned long)write_offset);
+
     // ready to use
     return true;
 }
