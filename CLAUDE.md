@@ -4,3 +4,4 @@
 - 负责分析ardusub的水平移动和定深、定向功能，移植到x型推进器分布的boat船型中，f:\opensource\usv_esp32\ardupilot-master\
 - 原理图 f:\opensource\usv_esp32\paper\SCH_无人船控制板 lite_2025-12-15.pdf
 - lora 库  f:\opensource\usv_esp32\esp32s3rover\git_SX126x-Arduino-master
+- **重要经验：ESP32 看门狗超时问题** — ArduPilot 的 `Rover::load_parameters()` 中 `AP_Param::convert_g2_objects()` 等参数转换函数涉及大量 flash 读写，在 ESP32 上执行极慢（>10秒）。原始 10s 看门狗超时不够，导致 setup 永远完不成 → 参数永远不保存 → 每次启动都 "Firmware change: erasing EEPROM" → 恶性循环无限重启。修复：`Scheduler.cpp` 中 `wdt_init(30000, ...)` 将 setup 阶段看门狗改为 30s。此外，ArduPilot HAL 接管 UART0 后 raw `printf` 失效，调试打印必须用 `hal.console->printf`。

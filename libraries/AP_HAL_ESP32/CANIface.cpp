@@ -19,19 +19,19 @@
 extern const AP_HAL::HAL& hal;
 
 // Default TWAI GPIO pins (override in hwdef.dat)
-// 原理图: CAN-TX=GPIO3, CAN-RX=GPIO20, STB=GPIO38
+// 原理图: CAN-TX网络=IO20→TCAN1042 TXD(pin1), CAN-RX网络=IO3←TCAN1042 RXD(pin4)
 #ifndef HAL_ESP32_CAN1_TX_PIN
-#define HAL_ESP32_CAN1_TX_PIN GPIO_NUM_3
+#define HAL_ESP32_CAN1_TX_PIN GPIO_NUM_20
 #endif
 
 #ifndef HAL_ESP32_CAN1_RX_PIN
-#define HAL_ESP32_CAN1_RX_PIN GPIO_NUM_20
+#define HAL_ESP32_CAN1_RX_PIN GPIO_NUM_3
 #endif
 
 // CAN transceiver standby control pin (TCAN1042 STB)
 // STB=LOW: Normal operation, STB=HIGH: Standby mode
-#ifndef HAL_ESP32_CAN1_STB_PIN
-#define HAL_ESP32_CAN1_STB_PIN GPIO_NUM_38
+#ifndef HAL_CAN_STB_PIN
+#define HAL_CAN_STB_PIN GPIO_NUM_38
 #endif
 
 // ESP32 clock configuration
@@ -127,16 +127,16 @@ bool CANIface::initTWAI(uint32_t bitrate, uint32_t acceptance_code, uint32_t acc
     // TCAN1042: STB=LOW for normal operation, STB=HIGH for standby mode
     // Must be set LOW before CAN communication can work
     gpio_config_t stb_conf = {
-        .pin_bit_mask = (1ULL << HAL_ESP32_CAN1_STB_PIN),
+        .pin_bit_mask = (1ULL << HAL_CAN_STB_PIN),
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE
     };
     gpio_config(&stb_conf);
-    gpio_set_level(HAL_ESP32_CAN1_STB_PIN, 0);  // Enable CAN transceiver (normal mode)
+    gpio_set_level(HAL_CAN_STB_PIN, 0);  // Enable CAN transceiver (normal mode)
     hal.console->printf("CAN%d: STB pin (GPIO%d) set LOW - transceiver enabled\\n",
-                       self_index_, HAL_ESP32_CAN1_STB_PIN);
+                       self_index_, HAL_CAN_STB_PIN);
 
     // Compute bit timings
     Timings timings;

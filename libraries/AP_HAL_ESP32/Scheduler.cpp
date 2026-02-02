@@ -675,8 +675,8 @@ void IRAM_ATTR Scheduler::_main_thread(void *arg)
     // CRITICAL FIX: Initialize watchdog BEFORE setup() to prevent "task not found" errors
     // during long initialization sequences (e.g., gyro calibration ~8s)
     // This ensures esp_task_wdt_reset() can be called during setup
-    printf("_main_thread: initializing watchdog (10s timeout)\n");
-    wdt_init(10000, 1 << FASTCPU); // 10 sec timeout during init (increased from 3s)
+    printf("_main_thread: initializing watchdog (30s timeout)\n");
+    wdt_init(30000, 1 << FASTCPU); // 30 sec timeout during init (ESP32 flash I/O is slow)
     fflush(stdout);
 
 #if AP_HAL_ANALOGIN_ENABLED

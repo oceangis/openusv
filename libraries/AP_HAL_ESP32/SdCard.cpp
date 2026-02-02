@@ -32,7 +32,7 @@
 #include <sys/types.h>
 #include "SPIDevice.h"
 
-#ifdef HAL_ESP32_SDCARD
+#if HAL_ESP32_SDCARD
 
 #if CONFIG_IDF_TARGET_ESP32S2 ||CONFIG_IDF_TARGET_ESP32C3
 #define SPI_DMA_CHAN    host.slot
@@ -86,7 +86,7 @@ done:
     unlink(fw_name);
 }
 
-#ifdef HAL_ESP32_SDMMC
+#if HAL_ESP32_SDMMC
 
 void mount_sdcard_mmc()
 {
@@ -110,7 +110,8 @@ void mount_sdcard_mmc()
     ESP_LOGI(TAG, "Initializing SD card as SDMMC (ESP32-S3)");
 
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
-    host.max_freq_khz = SDMMC_FREQ_DEFAULT;  // 20MHz for stability
+    host.max_freq_khz = SDMMC_FREQ_DEFAULT;  // 20MHz，依靠timeout快速失败
+    host.command_timeout_ms = 1000;  // 1秒超时，快速失败
 
     // Configure slot with custom GPIO pins for ESP32-S3
     sdmmc_slot_config_t slot_config = {
@@ -202,7 +203,7 @@ void mount_sdcard()
 #endif // emd mmc
 
 
-#ifdef HAL_ESP32_SDSPI
+#if HAL_ESP32_SDSPI
 ESP32::SPIBusDesc bus_ = HAL_ESP32_SDSPI;
 
 void mount_sdcard_spi()

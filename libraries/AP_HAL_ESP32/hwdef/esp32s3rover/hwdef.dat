@@ -2,15 +2,15 @@
 # Hardware: ESP32-S3-N16R8 (16MB Flash, 8MB PSRAM)
 # Application: USV Rover
 
-define HAL_ESP32_BOARD_NAME "esp32s3-rover-dronecan"
+define HAL_ESP32_BOARD_NAME "esp32s3-rover-v2-pcb"
 
 # ========================================================================
 # IMU Configuration - BNO08x via ExternalAHRS (I2C)
 # ========================================================================
-define HAL_INS_DEFAULT HAL_INS_NONE
+define HAL_INS_DEFAULT HAL_INS_INV2  # ✅ V2: ICM-20948 (Invensense v2)
 define INS_MAX_INSTANCES 1
 define HAL_COMPASS_MAX_SENSORS 1
-define AP_COMPASS_ICM20948_ENABLED 0
+define AP_COMPASS_ICM20948_ENABLED 1  # ✅ V2: Enable ICM-20948 compass
 define AP_COMPASS_I2C_BACKEND_DEFAULT_ENABLED 0
 define HAL_PROBE_EXTERNAL_I2C_COMPASSES 0
 
@@ -20,20 +20,23 @@ define HAL_BARO_ALLOW_INIT_NO_BARO 1
 # ========================================================================
 # External AHRS - BNO08x Configuration
 # ========================================================================
-define AP_EXTERNAL_AHRS_ENABLED 1
-define AP_EXTERNAL_AHRS_BNO08X_ENABLED 1
+define AP_EXTERNAL_AHRS_ENABLED 0  # V2: Disabled, using ICM-20948 INS
+define AP_EXTERNAL_AHRS_BNO08X_ENABLED 0  # V2: Using ICM-20948 instead
 define AP_EXTERNAL_AHRS_BACKEND_DEFAULT_ENABLED 0
 define AP_EXTERNAL_AHRS_VECTORNAV_ENABLED 0
 define AP_EXTERNAL_AHRS_MICROSTRAIN5_ENABLED 0
 define AP_EXTERNAL_AHRS_MICROSTRAIN7_ENABLED 0
 define AP_EXTERNAL_AHRS_INERTIALLABS_ENABLED 0
 define AP_EXTERNAL_AHRS_SBG_ENABLED 0
-define HAL_EXTERNAL_AHRS_DEFAULT 11
-define HAL_AHRS_EKF_TYPE_DEFAULT 11
+#define HAL_EXTERNAL_AHRS_DEFAULT 11  # V2: Disabled, using ICM-20948
+define HAL_AHRS_EKF_TYPE_DEFAULT 3  # ✅ V2: Use EKF3 with ICM-20948
+
+# ICM-20948 Interrupt Pin (V2 PCB)
+define ICM_INT_PIN GPIO_NUM_19
 
 # Disable EKF2/EKF3 - use ExternalAHRS only
-define HAL_NAVEKF2_AVAILABLE 0
-define HAL_NAVEKF3_AVAILABLE 0
+define HAL_NAVEKF2_AVAILABLE 0  # V2: Not using EKF2
+define HAL_NAVEKF3_AVAILABLE 1  # V2: MUST enable for ICM-20948 + EKF3
 
 # ========================================================================
 # Board Options - Disable MAVFTP for WiFi stability
@@ -49,10 +52,9 @@ define HAL_BRD_OPTIONS_DEFAULT 2
 # ========================================================================
 define DEFAULT_SERIAL0_PROTOCOL SerialProtocol_MAVLink2
 define DEFAULT_SERIAL0_BAUD 115200
-define DEFAULT_SERIAL1_PROTOCOL SerialProtocol_MAVLink2
-define DEFAULT_SERIAL1_BAUD 115200
-#define DEFAULT_SERIAL1_PROTOCOL SerialProtocol_GPS
-#define DEFAULT_SERIAL1_BAUD 38400
+#define DEFAULT_SERIAL1_PROTOCOL SerialProtocol_MAVLink2  # Disabled for GPS
+define DEFAULT_SERIAL1_BAUD 115200  # V2: GPS baud rate
+define DEFAULT_SERIAL1_PROTOCOL SerialProtocol_GPS  # ✅ V2: Enable GPS
 
 # GPS Configuration
 define GPS_TYPE 1
@@ -94,22 +96,26 @@ define HAL_DRONECAN_SEND_COMPASS 1
 define HAL_CAN_RX_QUEUE_SIZE 128
 define HAL_CAN_TX_QUEUE_SIZE 32
 
+# CAN Standby Control (V2 PCB - TCAN1042 STB pin)
+define CAN_STB_PIN GPIO_NUM_38
+
 # ========================================================================
-# RC Output - PWM
+# RC Output - PWM (V2 PCB - 无人船控制板lite-20260131.pdf)
 # ========================================================================
-ESP32_RCOUT GPIO_NUM_11
-ESP32_RCOUT GPIO_NUM_45
-ESP32_RCOUT GPIO_NUM_46
-ESP32_RCOUT GPIO_NUM_48
+ESP32_RCOUT GPIO_NUM_12
 ESP32_RCOUT GPIO_NUM_13
+ESP32_RCOUT GPIO_NUM_45
+ESP32_RCOUT GPIO_NUM_47
+ESP32_RCOUT GPIO_NUM_48
+ESP32_RCOUT GPIO_NUM_11
 
 define HAL_ESP32_RMT_RX_PIN_NUMBER GPIO_NUM_NC
 
 # ========================================================================
 # SD Card Configuration (SDMMC 4-bit mode)
 # ========================================================================
-define HAL_ESP32_SDMMC 1
-define HAL_ESP32_SDCARD 1
+define HAL_ESP32_SDMMC 0  # Disabled - no SD card
+define HAL_ESP32_SDCARD 0  # Disabled - no SD card
 define HAVE_FILESYSTEM_SUPPORT 1
 
 # ========================================================================
@@ -146,6 +152,12 @@ define AP_COMPASS_QMC5883L_ENABLED 0
 
 define AP_RANGEFINDER_BACKEND_DEFAULT_ENABLED 0
 define AP_RANGEFINDER_DRONECAN_ENABLED 1
+
+# ========================================================================
+# INA219 Current Sensor (V2 PCB)
+# ========================================================================
+define AP_BATTERY_INA2XX_ENABLED 1
+define HAL_BATTMON_INA2XX_I2C_ADDR 0x40
 
 # ========================================================================
 # LoRa Configuration (SX1268ZTR4) - Pin mapping from schematic
