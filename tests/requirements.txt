@@ -4,7 +4,12 @@
 # No external dependencies required for basic tests
 # The test framework uses only Python standard library
 
-# Optional dependencies for extended functionality:
-# matplotlib>=3.5.0  # For trajectory plotting
+# Visualization dependencies (uncomment to enable):
+matplotlib>=3.5.0    # For trajectory plotting and animation
+
+# SITL smoke test dependency:
+pymavlink>=2.4.0     # For MAVLink communication with SITL
+
+# Optional dependencies:
 # numpy>=1.21.0      # For advanced data analysis
-# pymavlink>=2.4.0   # For MAVLink hardware testing
+# pillow>=9.0.0      # For GIF animation export

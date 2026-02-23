@@ -1,0 +1,16 @@
+# USV Differential Thrust + Bow Thruster
+FRAME_CLASS      2
+SERVO1_FUNCTION  73    # ThrottleLeft  -> channel 0
+SERVO3_FUNCTION  74    # ThrottleRight -> channel 2
+SERVO5_FUNCTION  33    # Motor1 (bow thruster) -> channel 4, requires scripting/custom mixing
+MOT_THR_MIN      -100
+MOT_THR_MAX      100
+CRUISE_SPEED     1.0
+CRUISE_THROTTLE  30
+WP_RADIUS        3
+WP_SPEED         1.0
+TURN_RADIUS      1.0
+FS_GCS_ENABLE    1
+FS_ACTION        1
+ARMING_CHECK     1
+SCHED_LOOP_RATE  50
