@@ -1,0 +1,62 @@
+# ESP32-S3 Rover BNO08x ExternalAHRS
+# Backup board configuration
+
+include ../esp32s3rover_common/base.dat
+
+define HAL_ESP32_BOARD_NAME "esp32s3-rover-bno08x"
+
+# ========================================================================
+# IMU Configuration - None (BNO08x provides via ExternalAHRS)
+# ========================================================================
+define HAL_INS_DEFAULT HAL_INS_NONE
+define INS_MAX_INSTANCES 1
+
+# ========================================================================
+# Compass - Disabled (BNO08x provides heading via ExternalAHRS)
+# ========================================================================
+define HAL_COMPASS_MAX_SENSORS 1
+define AP_COMPASS_ICM20948_ENABLED 0
+define AP_COMPASS_I2C_BACKEND_DEFAULT_ENABLED 0
+define HAL_PROBE_EXTERNAL_I2C_COMPASSES 0
+define AP_COMPASS_AK09916_ENABLED 0
+define AP_COMPASS_AK8963_ENABLED 0
+define AP_COMPASS_BMM150_ENABLED 0
+define AP_COMPASS_HMC5843_ENABLED 0
+define AP_COMPASS_LIS3MDL_ENABLED 0
+define AP_COMPASS_QMC5883L_ENABLED 0
+
+# ========================================================================
+# External AHRS - BNO08x Configuration
+# ========================================================================
+define AP_EXTERNAL_AHRS_ENABLED 1
+define AP_EXTERNAL_AHRS_BNO08X_ENABLED 1
+define AP_EXTERNAL_AHRS_BACKEND_DEFAULT_ENABLED 0
+define AP_EXTERNAL_AHRS_VECTORNAV_ENABLED 0
+define AP_EXTERNAL_AHRS_MICROSTRAIN5_ENABLED 0
+define AP_EXTERNAL_AHRS_MICROSTRAIN7_ENABLED 0
+define AP_EXTERNAL_AHRS_INERTIALLABS_ENABLED 0
+define AP_EXTERNAL_AHRS_SBG_ENABLED 0
+define HAL_EXTERNAL_AHRS_DEFAULT 11
+define HAL_AHRS_EKF_TYPE_DEFAULT 11
+
+# ========================================================================
+# EKF - Disabled (using ExternalAHRS)
+# ========================================================================
+define HAL_NAVEKF2_AVAILABLE 0
+define HAL_NAVEKF3_AVAILABLE 0
+
+# ========================================================================
+# I2C bus: SDA=GPIO9, SCL=GPIO10 (V1 PCB - BNO08x)
+# ========================================================================
+ESP32_I2CBUS  I2C_NUM_0  GPIO_NUM_9  GPIO_NUM_10  400*KHZ  true  false
+
+# ========================================================================
+# GPS Configuration
+# ========================================================================
+define DEFAULT_SERIAL1_PROTOCOL SerialProtocol_MAVLink2
+define DEFAULT_SERIAL1_BAUD 115200
+define GPS_TYPE 1
+define GPS_TYPE2 0
+define AP_GPS_UBLOX_ENABLED 1
+define GPS_MAX_RECEIVERS 2
+define GPS_MAX_INSTANCES 2

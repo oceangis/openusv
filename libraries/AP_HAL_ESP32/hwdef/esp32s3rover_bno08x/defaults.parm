@@ -1,0 +1,27 @@
+# ESP32-S3 Rover BNO08x ExternalAHRS Parameters
+
+# AHRS/EKF - ExternalAHRS mode
+AHRS_EKF_TYPE    11
+EK3_ENABLE       0
+EK2_ENABLE       0
+
+# External AHRS
+EAHRS_TYPE       11
+EAHRS_RATE       50
+EAHRS_SENSORS    3
+
+# EKF3 Sources (when GPS available)
+EK3_SRC1_POSXY   3
+EK3_SRC1_VELXY   3
+EK3_SRC1_POSZ    0            # Disabled (无气压计)
+EK3_SRC1_YAW     1
+
+# Compass
+COMPASS_USE      1
+COMPASS_USE2     0
+COMPASS_USE3     0
+COMPASS_LEARN    0
+
+# INS
+INS_GYR_CAL      0
+INS_ACCEL_FILTER 10

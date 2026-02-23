@@ -1,3 +1,7 @@
+# DEPRECATED - This file is NOT used in current build
+# Active board: esp32s3rover_icm20948
+# See esp32s3rover_icm20948/defaults.parm + esp32s3rover_common/defaults_base.parm
+#
 # ESP32-S3 USV (Unmanned Surface Vehicle) Default Parameters
 # 无人船精简参数配置
 
@@ -120,7 +124,7 @@ SR0_RC_CHAN      1            # RC/电机输出 1Hz (调试用)
 SR0_POSITION     1            # 位置 1Hz
 SR0_EXTRA1       1            # 姿态 1Hz
 SR0_EXTRA2       1            # VFR_HUD 1Hz
-SR0_EXTRA3       1            # 电池/水深 1Hz
+SR0_EXTRA3       1            # 电池 1Hz
 SR0_PARAMS       10           # 参数 (仅连接时)
 SR0_ADSB         0            # 禁用ADSB
 

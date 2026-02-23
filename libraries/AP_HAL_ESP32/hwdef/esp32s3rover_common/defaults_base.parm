@@ -1,0 +1,59 @@
+# ESP32-S3 USV Common Default Parameters
+# Shared across all board variants
+
+# Arming
+ARMING_CHECK     1            # 启用预解锁检查（GPS可用时自动通过）
+ARMING_REQUIRE   0
+
+# Failsafe
+FS_THR_ENABLE    0            # 无遥控器，不需要油门失效保护
+FS_GCS_ENABLE    1            # GCS失联保护（RTL）
+FS_ACTION        1            # 失联时执行 RTL
+
+# Frame
+FRAME_CLASS      2
+
+# Servo (Differential Thrust)
+SERVO1_FUNCTION  73
+SERVO2_FUNCTION  74
+SERVO3_FUNCTION  0
+SERVO4_FUNCTION  0
+
+# Navigation
+WP_RADIUS        3
+WP_SPEED         1.0
+TURN_RADIUS      1.5
+NAV_SPEED        1.0
+
+# Throttle
+MOT_THR_MIN      -100
+MOT_THR_MAX      100
+CRUISE_SPEED     1.0
+CRUISE_THROTTLE  30
+
+# Scheduler
+SCHED_LOOP_RATE  50
+
+# Board
+BRD_OPTIONS      2
+
+# Logging
+LOG_BACKEND_TYPE 2            # MAVLink logging (SD卡已禁用)
+LOG_BITMASK      176126
+
+# Serial
+SERIAL0_PROTOCOL 2
+SERIAL0_BAUD     115200
+
+# MAVLink Stream Rates
+SR0_RAW_SENS     0
+SR0_RAW_CTRL     0
+SR0_EXT_STAT     1
+SR0_RC_CHAN      1
+SR0_POSITION     1
+SR0_EXTRA1       1
+SR0_EXTRA2       1
+SR0_EXTRA3       1
+SR0_PARAMS       10
+SR0_ADSB         0
+
