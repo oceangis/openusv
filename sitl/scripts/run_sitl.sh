@@ -4,9 +4,21 @@
 set -e
 
 ###############################################################################
+# Parse --local flag (use locally compiled SITL binary)
+###############################################################################
+LOCAL_BUILD=false
+if [ "$1" = "--local" ]; then
+    LOCAL_BUILD=true
+    shift
+fi
+
+###############################################################################
 # Usage
 ###############################################################################
-FRAME="${1:?Usage: $0 <frame-name> [sim_vehicle.py options]
+FRAME="${1:?Usage: $0 [--local] <frame-name> [sim_vehicle.py options]
+Options:
+  --local           Use locally compiled SITL binary (build_sitl/bin/ardurover)
+
 Available frames:
   usv-diff          Differential-thrust twin-motor
   usv-diff-bow      Diff-thrust + bow thruster
@@ -65,13 +77,32 @@ echo " USV SITL Launcher"
 echo "=============================================="
 echo "Frame   : $FRAME"
 echo "Home    : $HOME_LOC"
+echo "Local   : $LOCAL_BUILD"
 echo "ArduPilot: $AP_DIR"
 echo "Extra args: $*"
 echo "=============================================="
 echo ""
 
-exec python3 "$SIM_VEHICLE" \
-    -v Rover \
-    -f "$FRAME" \
-    -l "$HOME_LOC" \
-    "$@"
+if [ "$LOCAL_BUILD" = "true" ]; then
+    BINARY="$PROJECT_ROOT/build_sitl/bin/ardurover"
+    if [ ! -f "$BINARY" ]; then
+        echo "ERROR: Local SITL binary not found at $BINARY"
+        echo "Build first:"
+        echo "  cmake -S sitl -B build_sitl -DCMAKE_BUILD_TYPE=RelWithDebInfo"
+        echo "  cmake --build build_sitl -j\$(nproc)"
+        exit 1
+    fi
+    exec python3 "$SIM_VEHICLE" \
+        -v Rover \
+        -f "$FRAME" \
+        -l "$HOME_LOC" \
+        --no-rebuild \
+        -A "$BINARY" \
+        "$@"
+else
+    exec python3 "$SIM_VEHICLE" \
+        -v Rover \
+        -f "$FRAME" \
+        -l "$HOME_LOC" \
+        "$@"
+fi

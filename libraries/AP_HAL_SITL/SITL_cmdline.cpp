@@ -20,6 +20,14 @@
 #include <SITL/SIM_BalanceBot.h>
 #include <SITL/SIM_Sailboat.h>
 #include <SITL/SIM_MotorBoat.h>
+
+// Custom USV models
+#include "SIM_USV_DiffThrust.h"
+#include "SIM_USV_DiffBow.h"
+#include "SIM_USV_XFrame.h"
+#include "SIM_USV_Wingsail.h"
+#include "SIM_USV_Rudder.h"
+
 #include <SITL/SIM_CRRCSim.h>
 #include <SITL/SIM_Gazebo.h>
 #include <SITL/SIM_last_letter.h>
@@ -163,6 +171,12 @@ static const struct {
     { "balancebot",         BalanceBot::create },
     { "sailboat",           Sailboat::create },
     { "motorboat",          MotorBoat::create },
+    { "usv-diff",           USV_DiffThrust::create },
+    { "usv-diff-bow",       USV_DiffBow::create },
+    { "usv-xframe",         USV_XFrame::create },
+    { "usv-wingsail-flap",  USV_Wingsail::create },
+    { "usv-wingsail",       USV_Wingsail::create },
+    { "usv-rudder",         USV_Rudder::create },
 #if AP_SIM_CRRCSIM_ENABLED
     { "crrcsim",            CRRCSim::create },
 #endif  // AP_SIM_CRRCSIM_ENABLED
