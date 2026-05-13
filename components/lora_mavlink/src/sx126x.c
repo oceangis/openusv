@@ -7,6 +7,8 @@
 #include "lora_mavlink.h"
 
 #include <string.h>
+#include "esp_log.h"
+#include "driver/gpio.h"
 
 // SX1262 register addresses
 #define SX126X_REG_LORA_SYNC_WORD_MSB     0x0740
@@ -478,14 +480,19 @@ bool sx126x_init(const lora_config_t *config)
         return false;
     }
 
-    // Reset the radio (or wait if no RST pin)
-    sx126x_hal_reset();
+    // SPI wakeup: send GetStatus(0xC0) bypassing BUSY check
+    // Needed because chip may hold BUSY high after POR or sleep
+    {
+        extern void sx126x_hal_spi_transfer_no_busy(const uint8_t *tx, uint8_t *rx, size_t len);
+        uint8_t tx[2] = {0xC0, 0x00};
+        uint8_t rx[2] = {0};
+        sx126x_hal_spi_transfer_no_busy(tx, rx, 2);
+        ESP_LOGI("sx126x", "Wakeup: status=0x%02X BUSY=%d", rx[1], gpio_get_level(2));
+    }
 
-    // 软件唤醒 (因为 RST 引脚未连接)
-    sx126x_wakeup();
-
-    // Wait for chip ready
-    if (!sx126x_hal_wait_busy(100)) {
+    // Wait for chip ready (up to 1500ms for cold-start calibration)
+    if (!sx126x_hal_wait_busy(1500)) {
+        ESP_LOGE("sx126x", "BUSY timeout after wakeup");
         return false;
     }
 
@@ -551,11 +558,14 @@ bool sx126x_init(const lora_config_t *config)
     uint8_t cr = config ? config->coding_rate : SX126X_LORA_CR_4_5;
 
     // Calculate LDRO: required if symbol time > 16ms
-    // Symbol time = 2^SF / BW
-    uint8_t ldro = 0;
-    if (sf >= 10) {
-        ldro = 1;  // Enable LDRO for SF10, SF11, SF12
-    }
+    // Symbol time = 2^SF / BW_Hz
+    // SF7/BW500: 128/500000 = 0.256ms → no LDRO
+    // SF11/BW125: 2048/125000 = 16.4ms → LDRO needed
+    // SF12/BW125: 4096/125000 = 32.8ms → LDRO needed
+    uint32_t bw_hz_table[] = {125000, 250000, 500000};
+    uint32_t bw_hz = (bw <= 2) ? bw_hz_table[bw] : 500000;
+    uint32_t symbol_time_us = ((uint32_t)1 << sf) * 1000000 / bw_hz;
+    uint8_t ldro = (symbol_time_us > 16000) ? 1 : 0;
 
     sx126x_set_modulation_params(sf, bw, cr, ldro);
 
@@ -652,6 +662,9 @@ bool sx126x_start_rx_continuous(void)
 
     // Set standby
     sx126x_set_standby(SX126X_STANDBY_RC);
+
+    // Reset packet params for RX: max payload=255 (TX may have set a smaller value)
+    sx126x_set_packet_params(8, 0, 255, 1, 0);
 
     // Clear IRQ
     sx126x_clear_irq_status(0xFFFF);

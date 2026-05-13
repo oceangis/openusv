@@ -41,8 +41,8 @@ extern "C" {
 #define LORA_PIN_DIO1    1     // IO1 - DIO1
 #endif
 
-// LoRa RF parameters - matched with E22-400MBL-SC evaluation kit
-// E22-400MBL defaults: SF11, BW500, CR4/5, 433MHz
+// LoRa RF parameters
+// SF7/BW500: ~11kbps raw, 50B packet ~10ms air time, 2km+ over water
 #ifndef LORA_FREQ_HZ
 #define LORA_FREQ_HZ     433000000   // 433 MHz (E22-400M series)
 #endif
@@ -50,16 +50,25 @@ extern "C" {
 #define LORA_TX_POWER    22          // 22 dBm (max for SX1268)
 #endif
 #ifndef LORA_SF
-#define LORA_SF          11          // SF11 - match E22-400MBL default
+#define LORA_SF          7           // SF7 - low latency for RC control, 2km+ over water
 #endif
 #ifndef LORA_BW
-#define LORA_BW          500         // 500 kHz - match E22-400MBL default
+#define LORA_BW          500         // 500 kHz
 #endif
 
 // Buffer sizes
 #define LORA_RX_BUFFER_SIZE     512
-#define LORA_TX_BUFFER_SIZE     512
+#define LORA_TX_BUFFER_SIZE     1024
+#define LORA_TX_HI_BUFFER_SIZE  512   // High-priority (command responses)
 #define LORA_MAX_PACKET_SIZE    255
+
+// RX-dominant scheduling: default RX, periodic telemetry TX
+// Boat stays in RX to receive throttle/commands, sends telemetry periodically
+// At SF7/BW500: 50B packet ~10ms air time, 2Hz TX = 20ms/1s = 2% duty
+// Minimal filter: HB + GPS + VFR_HUD only (remote controller, not GCS)
+// ~60B/s telemetry, 100B/s capacity — headroom for command responses
+#define LORA_TELEM_INTERVAL_MS  500   // Send telemetry every 500ms (2Hz)
+#define LORA_TX_MAX_BYTES       50    // Max telemetry packet size (~10ms air time at SF7)
 
 // LoRa state
 typedef enum {

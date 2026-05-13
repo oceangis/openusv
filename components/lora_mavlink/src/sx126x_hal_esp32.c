@@ -9,6 +9,7 @@
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 #include "esp_timer.h"
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -27,13 +28,16 @@ static const int PIN_RST         = LORA_PIN_RST;  // Can be -1 if not connected
 static const gpio_num_t PIN_BUSY = LORA_PIN_BUSY;
 static const gpio_num_t PIN_DIO1 = LORA_PIN_DIO1;
 
+// Forward declaration
+static void spi_transfer(const uint8_t *tx_data, uint8_t *rx_data, size_t len);
+
 bool sx126x_hal_init(void)
 {
     if (hal_initialized) {
         return true;
     }
 
-    // Configure GPIO pins - CS is always required
+    // Configure CS as output
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << PIN_CS),
         .mode = GPIO_MODE_OUTPUT,
@@ -50,12 +54,12 @@ bool sx126x_hal_init(void)
         gpio_set_level((gpio_num_t)PIN_RST, 1);
     }
 
+    // Configure BUSY and DIO1 as inputs
     io_conf.pin_bit_mask = (1ULL << PIN_BUSY) | (1ULL << PIN_DIO1);
     io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
     gpio_config(&io_conf);
 
-    // Set initial pin states
+    // CS idle high
     gpio_set_level(PIN_CS, 1);
 
     // Configure SPI bus
@@ -112,15 +116,12 @@ void sx126x_hal_deinit(void)
 
 void sx126x_hal_reset(void)
 {
-    // Hardware reset only if RST pin is connected
     if (PIN_RST >= 0) {
         gpio_set_level((gpio_num_t)PIN_RST, 0);
         sx126x_hal_delay_ms(10);
         gpio_set_level((gpio_num_t)PIN_RST, 1);
         sx126x_hal_delay_ms(20);
     } else {
-        // No hardware reset pin - just wait for chip to be ready
-        // The chip will be reset via software command in sx126x_init()
         sx126x_hal_delay_ms(50);
     }
 }
@@ -155,6 +156,12 @@ static void spi_transfer(const uint8_t *tx_data, uint8_t *rx_data, size_t len)
     gpio_set_level(PIN_CS, 0);
     spi_device_polling_transmit(spi_handle, &trans);
     gpio_set_level(PIN_CS, 1);
+}
+
+// SPI transfer without BUSY check — used for wakeup from sleep
+void sx126x_hal_spi_transfer_no_busy(const uint8_t *tx_data, uint8_t *rx_data, size_t len)
+{
+    spi_transfer(tx_data, rx_data, len);
 }
 
 void sx126x_hal_write_cmd(uint8_t cmd, const uint8_t *data, size_t len)
