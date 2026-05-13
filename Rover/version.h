@@ -6,7 +6,7 @@
 
 #include "ap_version.h"
 
-#define THISFIRMWARE "ArduRover V4.7.0-dev"
+#define THISFIRMWARE "ArduRover-ESP32S3 V1.0"
 
 // the following line is parsed by the autotest scripts
 #define FIRMWARE_VERSION 4,7,0,FIRMWARE_VERSION_TYPE_DEV

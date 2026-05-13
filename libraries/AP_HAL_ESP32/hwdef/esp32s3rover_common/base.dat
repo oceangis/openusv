@@ -116,7 +116,7 @@ define LORA_PIN_BUSY    GPIO_NUM_2
 define LORA_PIN_DIO1    GPIO_NUM_1
 define LORA_FREQ_HZ     433000000
 define LORA_TX_POWER    22
-define LORA_SF          11
+define LORA_SF          7
 define LORA_BW          500
 
 define HAL_ESP32_ENABLE_LIGHT_SLEEP 0
@@ -126,7 +126,7 @@ define AP_WIFI_ESP32_ENABLED 0
 # USV Mode Simplification
 # Keep only: MANUAL, HOLD, AUTO, RTL, LOITER, GUIDED
 # ========================================================================
-define MODE_ACRO_ENABLED 0
+define MODE_ACRO_ENABLED 1
 define MODE_STEERING_ENABLED 0
 define MODE_CIRCLE_ENABLED 0
 define MODE_SMARTRTL_ENABLED 0
@@ -138,7 +138,7 @@ define MODE_POSHOLD_ENABLED 0
 # ========================================================================
 define NUM_RC_CHANNELS 6
 define AP_RELAY_NUM_RELAYS 2
-define RANGEFINDER_MAX_INSTANCES 0
+define RANGEFINDER_MAX_INSTANCES 1
 define AP_INERTIALSENSOR_HARMONICNOTCH_ENABLED 0
 define AP_FILTER_ENABLED 0
 define AP_PROXIMITY_MAX_INSTANCES 1
@@ -162,7 +162,7 @@ define AP_ROVER_BALANCEBOT_ENABLED 0
 # ========================================================================
 # WindVane - Disabled (no weather station connected, UART2=NC)
 # ========================================================================
-define AP_WINDVANE_ENABLED 0
+define AP_WINDVANE_ENABLED 1
 define AP_WINDVANE_NMEA_ENABLED 0
 
 # SERIAL3 = LoRa MAVLink telemetry (virtual UART over SPI)

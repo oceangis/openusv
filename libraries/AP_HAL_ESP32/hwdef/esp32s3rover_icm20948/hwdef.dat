@@ -3,7 +3,7 @@
 
 include ../esp32s3rover_common/base.dat
 
-define HAL_ESP32_BOARD_NAME "esp32s3-rover-v2-pcb"
+define HAL_ESP32_BOARD_NAME "ArduRover-ESP32S3 V1.0"
 
 # ========================================================================
 # IMU Configuration - ICM-20948 (I2C)
@@ -22,6 +22,7 @@ define HAL_COMPASS_AK09916_I2C_BUS 0
 define HAL_COMPASS_AK09916_I2C_ADDR (0x0C)
 define AP_COMPASS_I2C_BACKEND_DEFAULT_ENABLED 0
 define HAL_PROBE_EXTERNAL_I2C_COMPASSES 0
+define HAL_SKIP_AUTO_INTERNAL_I2C_PROBE
 define AP_COMPASS_AK09916_ENABLED 1
 define AP_COMPASS_AK8963_ENABLED 0
 define AP_COMPASS_BMM150_ENABLED 0
