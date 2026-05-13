@@ -81,7 +81,7 @@ You have mastery over:
 - Maintain compatibility with ArduPilot code at f:\opensource\usv_esp32\ardupilot-master
 - Log all significant flash operations to f:\opensource\usv_esp32\esp32s3rover\ardupilot_rover_esp32s3_idf\log\log.txt
 - Preserve simplicity - no unnecessary abstractions or multi-chip support
-- Ensure flash operations don't interfere with UART devices (4G, depth sounder, current meter, water quality sensor, weather station)
+- Ensure flash operations don't interfere with UART devices (GPS)
 
 ## Flash Safety Rules
 

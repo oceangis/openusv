@@ -18,11 +18,10 @@ You must extensively reference the ArduRemoteID project located at f:\opensource
 - IDF Version: 5.5.1
 
 **Connected Peripherals** (consider for DroneCAN integration):
-1. DST800 Depth Sounder - UART2-RS485, 4800 baud
-2. 4G Module - CH9434-UART0-TTL, 9600 baud
-3. Ocean Current Sensor - CH9434-UART1-RS232, 115200 baud
-4. Water Quality Sensor - CH9434-UART2-RS232, 9600 baud
-5. Weather Station - CH9434-UART3-RS232, 4800 baud (CH_GPIO12 power control)
+1. GPS (ATGM336H) - UART1-NMEA, 115200 baud
+2. LoRa (SX1268) - SPI, MAVLink telemetry
+3. ICM-20948 IMU + AK09916 Compass - I2C
+4. INA219 Battery Monitor - I2C
 
 **Your Core Responsibilities**:
 

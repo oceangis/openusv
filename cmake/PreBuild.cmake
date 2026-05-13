@@ -18,7 +18,7 @@ function(ardupilot_prebuild)
 
     # 如果没有设置，使用默认值
     if(NOT DEFINED ESP32_BOARD)
-        set(ESP32_BOARD "esp32s3rover")
+        set(ESP32_BOARD "esp32s3rover_icm20948")
     endif()
     message(STATUS "Target board: ${ESP32_BOARD}")
 
@@ -69,19 +69,28 @@ function(ardupilot_prebuild)
     endif()
 
     # ---------------------------------------------------------------------------
+    # 5-7: ESP32-specific steps (hwdef, defaults.parm, apj_tool)
+    #       Skipped for SITL builds — only needed for ESP32 hardware firmware
+    # ---------------------------------------------------------------------------
+    if(NOT SITL_BUILD)
+
+    # ---------------------------------------------------------------------------
     # 5. 生成 hwdef.h (从板型目录的 hwdef.dat)
     # ---------------------------------------------------------------------------
     set(HWDEF_DIR "${CMAKE_SOURCE_DIR}/libraries/AP_HAL_ESP32/hwdef")
     set(HWDEF_DAT "${HWDEF_DIR}/${ESP32_BOARD}/hwdef.dat")
     set(HWDEF_H "${HWDEF_DIR}/hwdef.h")
     set(HWDEF_PY "${HWDEF_DIR}/scripts/esp32_hwdef.py")
+    set(HWDEF_BASE "${HWDEF_DIR}/esp32s3rover_common/base.dat")
 
     if(EXISTS "${HWDEF_DAT}" AND EXISTS "${HWDEF_PY}")
-        # 检查是否需要重新生成
+        # 检查是否需要重新生成 (check both board hwdef.dat and common base.dat)
         set(need_gen FALSE)
         if(NOT EXISTS "${HWDEF_H}")
             set(need_gen TRUE)
         elseif("${HWDEF_DAT}" IS_NEWER_THAN "${HWDEF_H}")
+            set(need_gen TRUE)
+        elseif(EXISTS "${HWDEF_BASE}" AND "${HWDEF_BASE}" IS_NEWER_THAN "${HWDEF_H}")
             set(need_gen TRUE)
         endif()
 
@@ -103,6 +112,58 @@ function(ardupilot_prebuild)
     else()
         message(STATUS "hwdef.h: using existing file")
     endif()
+
+    # ---------------------------------------------------------------------------
+    # 6. 拼接 defaults.parm (common/defaults_base.parm + board/defaults.parm)
+    # ---------------------------------------------------------------------------
+    set(DEFAULTS_BASE "${HWDEF_DIR}/esp32s3rover_common/defaults_base.parm")
+    set(DEFAULTS_BOARD "${HWDEF_DIR}/${ESP32_BOARD}/defaults.parm")
+    set(DEFAULTS_MERGED "${CMAKE_SOURCE_DIR}/build/defaults.parm")
+
+    if(EXISTS "${DEFAULTS_BASE}" OR EXISTS "${DEFAULTS_BOARD}")
+        set(need_merge FALSE)
+        if(NOT EXISTS "${DEFAULTS_MERGED}")
+            set(need_merge TRUE)
+        else()
+            if(EXISTS "${DEFAULTS_BASE}" AND "${DEFAULTS_BASE}" IS_NEWER_THAN "${DEFAULTS_MERGED}")
+                set(need_merge TRUE)
+            endif()
+            if(EXISTS "${DEFAULTS_BOARD}" AND "${DEFAULTS_BOARD}" IS_NEWER_THAN "${DEFAULTS_MERGED}")
+                set(need_merge TRUE)
+            endif()
+        endif()
+
+        if(need_merge)
+            message(STATUS "Merging defaults.parm for ${ESP32_BOARD}")
+            set(merged_content "")
+            if(EXISTS "${DEFAULTS_BASE}")
+                file(READ "${DEFAULTS_BASE}" base_content)
+                string(APPEND merged_content "${base_content}")
+            endif()
+            if(EXISTS "${DEFAULTS_BOARD}")
+                file(READ "${DEFAULTS_BOARD}" board_content)
+                string(APPEND merged_content "\n${board_content}")
+            endif()
+            file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/build")
+            file(WRITE "${DEFAULTS_MERGED}" "${merged_content}")
+            message(STATUS "defaults.parm merged: ${DEFAULTS_MERGED}")
+        else()
+            message(STATUS "defaults.parm: up to date")
+        endif()
+    endif()
+
+    # ---------------------------------------------------------------------------
+    # 7. 嵌入 defaults.parm 到固件 (post-build via apj_tool.py)
+    #    注意: 实际嵌入在编译完成后执行，这里只设置变量供 CMakeLists.txt 使用
+    # ---------------------------------------------------------------------------
+    set(APJ_TOOL "${CMAKE_SOURCE_DIR}/Tools/scripts/apj_tool.py")
+    if(EXISTS "${DEFAULTS_MERGED}" AND EXISTS "${APJ_TOOL}")
+        set(APJ_TOOL_PATH "${APJ_TOOL}" PARENT_SCOPE)
+        set(DEFAULTS_PARM_PATH "${DEFAULTS_MERGED}" PARENT_SCOPE)
+        message(STATUS "defaults.parm embedding: configured (apj_tool.py)")
+    endif()
+
+    endif() # NOT SITL_BUILD
 
     message(STATUS "==============================================")
 endfunction()

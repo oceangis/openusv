@@ -1,6 +1,6 @@
 ---
 name: chibios-code-optimizer
-description: Use this agent when you need to analyze ChibiOS HAL code patterns from ArduPilot's stable implementation and optimize the current ESP32-S3 IDF project code accordingly. This includes reviewing thread management, memory allocation, peripheral drivers, timing mechanisms, and real-time scheduling patterns. Examples:\n\n<example>\nContext: User has implemented a new UART driver and wants to ensure it follows stable patterns.\nuser: "I just wrote a new UART driver for the water quality sensor, can you review it?"\nassistant: "Let me use the chibios-code-optimizer agent to analyze your UART implementation against ChibiOS's stable patterns."\n<Task tool call to chibios-code-optimizer agent>\n</example>\n\n<example>\nContext: User is experiencing stability issues with task scheduling.\nuser: "The system sometimes hangs when multiple sensors are reading simultaneously"\nassistant: "I'll use the chibios-code-optimizer agent to analyze your task scheduling and compare it with ChibiOS's proven threading patterns."\n<Task tool call to chibios-code-optimizer agent>\n</example>\n\n<example>\nContext: User wants to optimize memory usage in their ESP32 project.\nuser: "How can I improve memory management in my sensor reading code?"\nassistant: "Let me invoke the chibios-code-optimizer agent to review ChibiOS's memory allocation strategies and suggest optimizations for your code."\n<Task tool call to chibios-code-optimizer agent>\n</example>\n\n<example>\nContext: After implementing a new feature, proactive review is needed.\nuser: "I've finished implementing the DroneCAN interface"\nassistant: "Now let me use the chibios-code-optimizer agent to review your implementation against ChibiOS's stable HAL patterns to ensure reliability."\n<Task tool call to chibios-code-optimizer agent>\n</example>
+description: Use this agent when you need to analyze ChibiOS HAL code patterns from ArduPilot's stable implementation and optimize the current ESP32-S3 IDF project code accordingly. This includes reviewing thread management, memory allocation, peripheral drivers, timing mechanisms, and real-time scheduling patterns. Examples:\n\n<example>\nContext: User has implemented a new UART driver and wants to ensure it follows stable patterns.\nuser: "I just wrote a new UART driver for the GPS, can you review it?"\nassistant: "Let me use the chibios-code-optimizer agent to analyze your UART implementation against ChibiOS's stable patterns."\n<Task tool call to chibios-code-optimizer agent>\n</example>\n\n<example>\nContext: User is experiencing stability issues with task scheduling.\nuser: "The system sometimes hangs when multiple sensors are reading simultaneously"\nassistant: "I'll use the chibios-code-optimizer agent to analyze your task scheduling and compare it with ChibiOS's proven threading patterns."\n<Task tool call to chibios-code-optimizer agent>\n</example>\n\n<example>\nContext: User wants to optimize memory usage in their ESP32 project.\nuser: "How can I improve memory management in my sensor reading code?"\nassistant: "Let me invoke the chibios-code-optimizer agent to review ChibiOS's memory allocation strategies and suggest optimizations for your code."\n<Task tool call to chibios-code-optimizer agent>\n</example>\n\n<example>\nContext: After implementing a new feature, proactive review is needed.\nuser: "I've finished implementing the DroneCAN interface"\nassistant: "Now let me use the chibios-code-optimizer agent to review your implementation against ChibiOS's stable HAL patterns to ensure reliability."\n<Task tool call to chibios-code-optimizer agent>\n</example>
 model: sonnet
 ---
 
@@ -83,11 +83,11 @@ For each optimization recommendation, provide:
 ## Hardware Context
 
 The project interfaces with:
-- Depth sounder (DST800) on ESP32 UART2 (RS485, 4800 baud)
-- 4G module on CH9434 UART0 (TTL, 9600 baud)
-- Ocean current sensor on CH9434 UART1 (RS232, 115200 baud)
-- Water quality sensor on CH9434 UART2 (RS232, 9600 baud)
-- Weather station on CH9434 UART3 (RS232, 4800 baud, power-controlled via CH_GPIO12)
+- GPS (ATGM336H) on ESP32 UART1 (NMEA, 115200 baud)
+- LoRa (SX1268) on SPI for MAVLink telemetry
+- DroneCAN on TWAI (CAN bus)
+- ICM-20948 IMU + AK09916 Compass on I2C
+- INA219 Battery Monitor on I2C
 
 ## Quality Checklist
 
