@@ -21,7 +21,7 @@
 #include <AP_InternalError/AP_InternalError.h>
 #include <stdio.h>
 
-#define FLASHSTORAGE_DEBUG 1
+// #define FLASHSTORAGE_DEBUG 1  // 禁用: printf洪泛会阻塞UART0导致flash写入超时
 
 #if FLASHSTORAGE_DEBUG
 #define debug(fmt, args...)  do { printf(fmt, ##args); } while(0)

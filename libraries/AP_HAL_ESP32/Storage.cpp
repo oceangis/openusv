@@ -56,26 +56,13 @@ void Storage::_storage_open(void)
 
     ESP_LOGI(STORAGE_TAG, "partition found: addr=0x%08lx, size=%lu bytes", (unsigned long)p->address, (unsigned long)p->size);
 
-    // 关键诊断：读取并打印分区前 32 字节的内容
-    uint8_t diag_buffer[32];
-    esp_err_t diag_ret = esp_partition_read(p, 0, diag_buffer, sizeof(diag_buffer));
-    if (diag_ret == ESP_OK) {
-        printf("\n=== FLASH CONTENT DIAGNOSTIC ===\n");
-        printf("First 32 bytes of storage partition:\n");
-        for (int i = 0; i < 32; i++) {
-            printf("%02X ", diag_buffer[i]);
-            if ((i + 1) % 16 == 0) printf("\n");
-        }
-        printf("================================\n\n");
-    }
-
     // Check if this is first boot by reading first 16 bytes of storage
     // If all 0xFF, force erase_all() to initialize properly
     uint8_t test_buffer[16];
     esp_err_t read_ret = esp_partition_read(p, 0, test_buffer, sizeof(test_buffer));
     if (read_ret == ESP_OK) {
         bool all_erased = true;
-        for (int i = 0; i < sizeof(test_buffer); i++) {
+        for (int i = 0; i < (int)sizeof(test_buffer); i++) {
             if (test_buffer[i] != 0xFF) {
                 all_erased = false;
                 break;
@@ -83,16 +70,16 @@ void Storage::_storage_open(void)
         }
 
         if (all_erased) {
-            printf("!!! Storage appears uninitialized (all 0xFF), forcing erase_all() !!!\n");
+            ESP_LOGW(STORAGE_TAG, "Storage uninitialized (all 0xFF), forcing erase_all()");
             // Storage never initialized, force clean init
             memset(_buffer, 0, STORAGE_SIZE);
             if (!_flash.erase()) {
-                printf("ERROR: Failed to erase storage on first boot\n");
+                ESP_LOGE(STORAGE_TAG, "Failed to erase storage on first boot");
                 _use_empty_storage = true;
                 _initialised = true;
                 return;
             }
-            printf("Storage successfully initialized after erase\n");
+            ESP_LOGI(STORAGE_TAG, "Storage initialized after erase");
             _initialised = true;
             return;
         }
@@ -101,17 +88,8 @@ void Storage::_storage_open(void)
     // load from storage backend
     _flash_load();
 
-    // 醒目的状态报告
-    printf("\n");
-    printf("========================================\n");
-    printf("STORAGE INIT COMPLETE\n");
-    printf("  _use_empty_storage = %d\n", _use_empty_storage ? 1 : 0);
-    printf("  _initialised = 1\n");
-    printf("  Params %s persist!\n", _use_empty_storage ? "will NOT" : "WILL");
-    printf("========================================\n");
-    printf("\n");
-
-    ESP_LOGI(STORAGE_TAG, "init complete: _use_empty_storage=%d", _use_empty_storage ? 1 : 0);
+    ESP_LOGI(STORAGE_TAG, "init complete: empty_storage=%d, persist=%s",
+             _use_empty_storage ? 1 : 0, _use_empty_storage ? "NO" : "YES");
     _initialised = true;
 }
 
@@ -147,31 +125,15 @@ void Storage::read_block(void *dst, uint16_t loc, size_t n)
     memcpy(dst, &_buffer[loc], n);
 }
 
-// 参数保存诊断计数器
-static uint32_t _write_block_count = 0;
-static uint32_t _last_write_report_ms = 0;
-
 void Storage::write_block(uint16_t loc, const void *src, size_t n)
 {
     if (loc >= sizeof(_buffer)-(n-1)) {
-#ifdef STORAGEDEBUG
-        printf("%s:%d write_block failed \n", __PRETTY_FUNCTION__, __LINE__);
-#endif
         return;
     }
     if (memcmp(src, &_buffer[loc], n) != 0) {
         _storage_open();
         memcpy(&_buffer[loc], src, n);
         _mark_dirty(loc, n);
-        _write_block_count++;
-
-        // 每5秒报告一次写入统计
-        uint32_t now = AP_HAL::millis();
-        if (now - _last_write_report_ms > 5000) {
-            _last_write_report_ms = now;
-            ESP_LOGI(STORAGE_TAG, "write_block: total=%lu, use_empty=%d, init=%d",
-                     (unsigned long)_write_block_count, _use_empty_storage ? 1 : 0, _initialised ? 1 : 0);
-        }
     }
 }
 
@@ -233,40 +195,18 @@ void Storage::_flash_load(void)
 
 /*
   write one storage line. This also updates _dirty_mask.
-  Write verification disabled during init to prevent infinite retry loops.
 */
-// Flash 写入诊断计数器
-static uint32_t _flash_write_success = 0;
-static uint32_t _flash_write_fail = 0;
-static uint32_t _last_flash_report_ms = 0;
-
 void Storage::_flash_write(uint16_t line)
 {
-#ifdef STORAGEDEBUG
-    printf("%s:%d \n", __PRETTY_FUNCTION__, __LINE__);
-#endif
-
     // Feed watchdog during flash writes
     esp_task_wdt_reset();
 
     if (_flash.write(line*STORAGE_LINE_SIZE, STORAGE_LINE_SIZE)) {
         _write_count++;
-        _flash_write_success++;
-
-        // Always mark as clean after successful write
-        // Verification is done separately via verify_storage_integrity() if needed
         _dirty_mask.clear(line);
     } else {
-        _flash_write_fail++;
-    }
-
-    // 每10秒报告一次 flash 写入统计
-    uint32_t now = AP_HAL::millis();
-    if (now - _last_flash_report_ms > 10000) {
-        _last_flash_report_ms = now;
-        ESP_LOGI(STORAGE_TAG, "flash_write: OK=%lu FAIL=%lu use_empty=%d",
-                 (unsigned long)_flash_write_success, (unsigned long)_flash_write_fail,
-                 _use_empty_storage ? 1 : 0);
+        // Only log failures to avoid flooding UART0
+        ESP_LOGE(STORAGE_TAG, "flash_write FAILED line=%u", line);
     }
 }
 
