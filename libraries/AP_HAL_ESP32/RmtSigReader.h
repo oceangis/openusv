@@ -15,28 +15,56 @@
  */
 #pragma once
 
-#include <AP_HAL/utility/RingBuffer.h>
 #include "AP_HAL_ESP32.h"
-#include "driver/rmt.h"
+
+#ifdef HAL_ESP32_RCIN
+
+// Modern ESP-IDF v5+ RMT RX API (legacy driver/rmt.h has been migrated away from)
+#include "driver/rmt_rx.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 
 class ESP32::RmtSigReader
 {
 public:
-    static const int frequency = 1000000;  //1MHZ
-    static const int max_pulses = 128;
-    static const int idle_threshold = 3000;  //we require at least 3ms gap between frames
+    static const uint32_t resolution_hz = 1000000;   // 1 MHz tick = 1 us per duration count
+    static const size_t   mem_block_symbols = 128;   // RMT memory block size in symbols
+    static const size_t   rx_buf_symbols = 128;      // user RX buffer size (symbols)
+    static const uint32_t idle_threshold_us = 3000;  // gap > 3ms terminates a frame
+
     void init();
     bool read(uint32_t &width_high, uint32_t &width_low);
+    void disable();
+
 private:
     bool add_item(uint32_t duration, bool level);
+    void rearm_rx();
 
-    RingbufHandle_t handle;
-    rmt_item32_t* item;
-    size_t item_size;
-    size_t current_item;
+    // ISR callback — copies event data to queue
+    static bool IRAM_ATTR on_recv_done(rmt_channel_handle_t channel,
+                                       const rmt_rx_done_event_data_t *edata,
+                                       void *user_ctx);
 
-    uint32_t last_high;
-    uint32_t ready_high;
-    uint32_t ready_low;
-    bool pulse_ready;
+    rmt_channel_handle_t rx_chan = nullptr;
+    QueueHandle_t recv_queue = nullptr;
+    rmt_receive_config_t rx_config = {};
+
+    // Double buffer: one is armed with rmt_receive(), other is being processed
+    rmt_symbol_word_t buf_a[rx_buf_symbols];
+    rmt_symbol_word_t buf_b[rx_buf_symbols];
+    rmt_symbol_word_t *armed_buf = nullptr;    // currently armed (passed to rmt_receive)
+    rmt_symbol_word_t *process_buf = nullptr;  // last received, being walked by read()
+    size_t process_count = 0;                  // num symbols in process_buf
+    size_t process_idx = 0;                    // next symbol index to consume
+
+    // Pulse-pair state — same semantics as legacy driver
+    uint32_t last_high = 0;
+    uint32_t ready_high = 0;
+    uint32_t ready_low = 0;
+    bool pulse_ready = false;
+
+    bool initialised = false;
+    bool enabled = false;
 };
+
+#endif  // HAL_ESP32_RCIN

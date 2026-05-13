@@ -61,7 +61,15 @@ ESP32_RCOUT GPIO_NUM_47
 ESP32_RCOUT GPIO_NUM_48
 ESP32_RCOUT GPIO_NUM_11
 
-define HAL_ESP32_RMT_RX_PIN_NUMBER GPIO_NUM_NC
+# ========================================================================
+# SBUS / PPM RC Input - GPIO 8
+# PCB V2.1 has Q53 SS8050 inverter for SBUS (inverted UART → normal level)
+# Uses new ESP-IDF v5 RMT RX driver (driver/rmt_rx.h)
+# AP_RCProtocol auto-detects SBUS / SBUS_NI / PPM / DSM from pulse patterns
+# ========================================================================
+define HAL_ESP32_RCIN GPIO_NUM_8
+
+define HAL_ESP32_RMT_RX_PIN_NUMBER GPIO_NUM_8
 
 # ========================================================================
 # SD Card - Disabled
