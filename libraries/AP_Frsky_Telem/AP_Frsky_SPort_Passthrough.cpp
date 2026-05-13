@@ -253,8 +253,10 @@ bool AP_Frsky_SPort_Passthrough::is_packet_ready(uint8_t idx, bool queue_empty)
     }
 #else
     {
+#if AP_WINDVANE_ENABLED
         const AP_WindVane* windvane = AP_WindVane::get_singleton();
         packet_ready = windvane != nullptr && windvane->enabled();
+#endif
     }
 #endif
         break;
@@ -772,8 +774,9 @@ uint32_t AP_Frsky_SPort_Passthrough::calc_wind(void)
     // wind speed in dm/s
     value |= prep_number(roundf(v.length() * 10), 2, 1) << WIND_SPEED_OFFSET;
 #else
-    const AP_WindVane* windvane = AP_WindVane::get_singleton();
     uint32_t value = 0;
+#if AP_WINDVANE_ENABLED
+    const AP_WindVane* windvane = AP_WindVane::get_singleton();
     if (windvane != nullptr && windvane->enabled()) {
         // true wind angle in 3 degree increments 0,360 (unsigned)
         value = prep_number(roundf(wrap_360(degrees(windvane->get_true_wind_direction_rad())) * (1.0f/3.0f)), 2, 0);
@@ -784,6 +787,7 @@ uint32_t AP_Frsky_SPort_Passthrough::calc_wind(void)
         // apparent wind speed in dm/s
         value |= prep_number(roundf(windvane->get_apparent_wind_speed() * 10), 2, 1) << WIND_APPARENT_SPEED_OFFSET;
     }
+#endif
 #endif
     return value;
 }

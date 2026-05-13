@@ -158,6 +158,8 @@ void AP_InertialSensor_Invensensev2::_fifo_reset()
 {
     uint8_t user_ctrl = _last_stat_user_ctrl;
     user_ctrl &= ~(BIT_USER_CTRL_FIFO_EN);
+    // Ensure I2C Master is never enabled on I2C bus — bypass mode is used for AK09916
+    user_ctrl &= ~(BIT_USER_CTRL_I2C_MST_EN);
 
     _dev->set_speed(AP_HAL::Device::SPEED_LOW);
     _register_write(INV2REG_FIFO_EN_2, 0);
@@ -167,6 +169,10 @@ void AP_InertialSensor_Invensensev2::_fifo_reset()
     _register_write(INV2REG_USER_CTRL, user_ctrl | BIT_USER_CTRL_FIFO_EN);
     _register_write(INV2REG_FIFO_EN_2, BIT_XG_FIFO_EN | BIT_YG_FIFO_EN |
                     BIT_ZG_FIFO_EN | BIT_ACCEL_FIFO_EN | BIT_TEMP_FIFO_EN, true);
+    // Re-assert bypass so AK09916 remains accessible at 0x0C on main I2C bus
+    if (_dev->bus_type() != AP_HAL::Device::BUS_TYPE_SPI) {
+        _register_write(INV2REG_INT_PIN_CFG, BIT_BYPASS_EN);
+    }
     hal.scheduler->delay_microseconds(1);
     _dev->set_speed(AP_HAL::Device::SPEED_HIGH);
     _last_stat_user_ctrl = user_ctrl | BIT_USER_CTRL_FIFO_EN;
@@ -791,6 +797,16 @@ bool AP_InertialSensor_Invensensev2::_hardware_init(void)
 
     if (_inv2_type == Invensensev2_ICM20649) {
         _clip_limit = 29.5f * GRAVITY_MSS;
+    }
+
+    // For I2C bus: enable bypass mode so internal AK09916 magnetometer
+    // is directly accessible on the main I2C bus at address 0x0C.
+    // Chip reset disables bypass, so we must re-enable it here.
+    // Note: I2C_MST_EN must remain 0 for bypass to work (already 0 after reset).
+    if (_dev->bus_type() != AP_HAL::Device::BUS_TYPE_SPI) {
+        _register_write(INV2REG_INT_PIN_CFG, BIT_BYPASS_EN);
+        hal.scheduler->delay(1);
+        DEV_PRINTF("[ICM20948] I2C bypass enabled for AK09916\n");
     }
 
     DEV_PRINTF("[ICM20948] _hardware_init: ===== 硬件初始化成功 ===== ✓\n");
