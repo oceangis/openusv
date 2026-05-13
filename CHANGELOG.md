@@ -1,60 +1,86 @@
 # Changelog
 
-## [v2.4.0] - 2026-01-02
+## [v2.6.0] - 2026-05-13
 
-### USV 帆船仿真测试框架
+### 固件标识 + 双推差速 USV 配置 + ACRO 航向保持
 
-#### Phase 1: C++ SITL 仿真器 (simulation/)
-- **SIM_Sailboat_USV**: 完整的物理仿真引擎
-  - 三种翼帆控制模式: ROTATION, FLAP, FREE
-  - 气动升力/阻力曲线 (18点查表)
-  - 船体水动力学
-  - 波浪效应 (横摇/纵摇/升沉)
-  - 潮流/海流模拟
-- **环境参数**: 蒲福风级 (0-12), 道格拉斯海况 (0-9)
-- **预设场景**: calm_sea, moderate_wind, storm, tide_current, upwind_test
+#### 固件 banner 重命名
+- `Rover/version.h:9` — `THISFIRMWARE` 改为 `"ArduRover-ESP32S3 V1.0"`
+- `libraries/AP_HAL_ESP32/hwdef/hwdef.h:93` — `HAL_ESP32_BOARD_NAME` 改为 `"ArduRover-ESP32S3 V1.0"`
+- `libraries/AP_HAL_ESP32/hwdef/esp32s3rover_icm20948/hwdef.dat:6` — 同上
+- **关键**：`FIRMWARE_VERSION 4,7,0,FIRMWARE_VERSION_TYPE_DEV` 数字**故意保留不变**，避免 ArduPilot "firmware change → erase EEPROM" 触发，所有用户参数（含校准）跨版本保留
+- 启动通过 `MAV_CMD_DO_SEND_BANNER` (42428) 触发显示
 
-#### Phase 2: Python 测试框架 (tests/sitl/)
-- **sailboat_sim.py**: 纯 Python 物理模拟器
-- **测试类别**: upwind_tacking, wingsail_modes, storm_stability
-- **报告格式**: HTML/JSON/Markdown
+#### ACRO 模式恢复（航向保持 / 转向速率控制）
+- `libraries/AP_HAL_ESP32/hwdef/hwdef.h:65` `MODE_ACRO_ENABLED 0 → 1`
+- `libraries/AP_HAL_ESP32/hwdef/esp32s3rover_common/base.dat:129` 同步
+- 实测：摇杆居中时航向自锁，目标 turn rate=0 → IMU 闭环维持当前航向
+- 默认参数：`ACRO_TURN_RATE=180°/s`, `ATC_STR_RAT_P/I=0.2`, `ATC_STR_RAT_FF=1.0`, `IMAX=1.0`
+- 用途：USV 长途巡航的主力模式（只推油门，航向自动保持）
 
-#### Phase 3: GitHub Actions CI
-- **sailboat-tests.yml**: Python 测试自动化
-- **esp32-build.yml**: ESP32 固件编译检查
+#### hwdef.h ↔ base.dat 一致性修复
+- `AP_WINDVANE_ENABLED`: base.dat `0 → 1`（与 hwdef.h 一致）
+- `RANGEFINDER_MAX_INSTANCES`: base.dat `0 → 1`（与 hwdef.h 一致）
+- `LORA_SF`: 两处都 `11 → 7`（匹配 lora_mavlink 组件实际 SF7 配置）
+- 避免下次 CMake 重生成 hwdef.h 时静默丢失修改
+
+#### 差速双推 USV 配置（运行时参数，已写入 NVS）
+- `SERVO1_FUNCTION = 73` (ThrottleLeft) → 输出到 GPIO 12 / H10 pin 5
+- `SERVO3_FUNCTION = 74` (ThrottleRight) → 输出到 GPIO 45 / H10 pin 1
+- `have_skid_steering()` 自动激活，差速混控公式 `S1=throttle+steer, S3=throttle-steer`
+- 验证：50Hz 持续 RC override 测试 (`bench/verify/skid_steering.py`)：
+  - 全右转 (1900,1500): DIFF=+758μs（原地右旋，一推正一推反）
+  - 全左转 (1100,1500): DIFF=-750μs
+  - 中位 (1500,1500): DIFF=0μs
+  - 全部输出在 PWM [1100, 1900] 范围内
+
+#### 6 面加速度校准（已固化）
+- `INS_ACCOFFS_X/Y/Z = (-0.1355, +0.1508, +0.1462)` m/s²
+- `INS_ACCSCAL_X/Y/Z ≈ 1.000` (scale 误差 < 0.3%)
+- `AHRS_TRIM_X/Y = (-0.35°, +0.66°)`
+- 静态 `|accel| = 999.3 mg` ≈ 1g
+- 校准过程通过 `MAV_CMD_PREFLIGHT_CALIBRATION param5=1` + 6 次姿态确认完成
+
+#### 配置参数固化
+- `FS_THR_ENABLE = 0`（无 RC 接收机 → 关闭 RC failsafe）
+- `LOG_BACKEND_TYPE = 0`（关闭 SD 日志失败 prearm 警告）
+- `ARMING_CHECK = 178` = Baro|INS|Params|BoardVoltage（USV 测试组合）
+- `WP_SPEED = 2.0`（对齐 CRUISE_SPEED，避免 base-throttle 外推）
+
+#### AK09916 罗盘 I2C bypass 修复
+- `libraries/AP_InertialSensor/AP_InertialSensor_Invensensev2.cpp:160-172, 802-810`
+- 配置 ICM-20948 让 AK09916 透过 bypass 模式直接出现在主 I2C 总线（0x0C）
+- `I2C_MST_EN=0` + `BIT_BYPASS_EN=1` 必须保持，FIFO reset 后需重新断言
+- 与现行 `_probe_external_i2c_compasses()` 默认 `ROTATION_YAW_270` 不兼容，需在 hwdef.h 中显式 `HAL_SKIP_AUTO_INTERNAL_I2C_PROBE` + `HAL_MAG_PROBE_LIST AK09916:probe_ICM20948_I2C ROTATION_PITCH_180_YAW_90`
+
+#### LoRa MAVLink 重写（components/lora_mavlink/）
+- RX 主导状态机：默认 RX 监听，每 500ms 发一个遥测包（2Hz）
+- 双 TX 队列：高优先级（HB/STATUSTEXT/COMMAND_ACK）即时发送，低优先级遥测攒包
+- MAVLink 边界对齐：try_transmit 不在 LoRa 包间分割消息
+- 高优先级消息列表加入 MISSION_REQUEST (msg_id=40) — ArduPilot 默认旧协议
+- SF7/BW500: 10ms 包空中时间，RX 占空比 >98%
+- 与 EBYTE E22-400MBL-SC 评估板互通 100% 已验证
+
+#### Storage / FlashStorage 日志清理
+- `libraries/AP_FlashStorage/AP_FlashStorage.cpp:24` — 禁用 `FLASHSTORAGE_DEBUG`（printf 在 UART0 上会与 HAL console 抢占造成死锁）
+- `libraries/AP_HAL_ESP32/Storage.cpp` — `printf` → `ESP_LOGI`/`ESP_LOGE` 经 IDF 日志路由
+
+#### 工具 / 文档
+- 新建 `bench/` 目录归集出水测试脚本（verify/analyze/flash）
+- 新建 `bench/README.md`、`params/README.md` 解释脚本和参数备份用途
+- 新建 `PRE_WATER_CHECKLIST.md`（完整出水前流程）
+- `params/baseline_v2.parm` 提交 529 参数完整快照
+- `.gitignore` 大幅扩展（`/_*.py /_*.log /_*.txt /_*.json /_*.bat /_*.bin /_io_xlsx/ /baseline*.parm`）
+- 删除 `Rover/balance_bot.cpp` 及其引用（USV 不需要平衡车代码）
 
 ---
 
-## [v2.3.0] - 2026-01-02
-# Changelog
+## [v2.5.0] - 2026-01-15
 
-## [v2.4.0] - 2026-01-02
-
-### USV 帆船仿真测试框架
-
-#### Phase 1: C++ SITL 仿真器 (simulation/)
-- **SIM_Sailboat_USV**: 完整的物理仿真引擎
-  - 三种翼帆控制模式: ROTATION, FLAP, FREE
-  - 气动升力/阻力曲线 (18点查表)
-  - 船体水动力学
-  - 波浪效应 (横摇/纵摇/升沉)
-  - 潮流/海流模拟
-- **环境参数**: 蒲福风级 (0-12), 道格拉斯海况 (0-9)
-- **预设场景**: calm_sea, moderate_wind, storm, tide_current, upwind_test
-
-#### Phase 2: Python 测试框架 (tests/sitl/)
-- **sailboat_sim.py**: 纯 Python 物理模拟器
-- **测试类别**: upwind_tacking, wingsail_modes, storm_stability
-- **报告格式**: HTML/JSON/Markdown
-
-#### Phase 3: GitHub Actions CI
-- **sailboat-tests.yml**: Python 测试自动化
-- **esp32-build.yml**: ESP32 固件编译检查
+### PCB V2.1 适配
+- 修复重启死循环及硬件引脚配置
 
 ---
-
-## [v2.3.0] - 2026-01-02
-# Changelog
 
 ## [v2.4.0] - 2026-01-02
 
@@ -85,44 +111,10 @@
 
 ### 修复参数持久化关键BUG
 
-#### 关键修复: current_sector 设置错误
 - **问题**: AP_FlashStorage::init() 从 Sector 1 加载数据后，current_sector 仍为 0
 - **后果**: 新参数写入 Sector 0，重启后加载 Sector 1 旧数据，导致参数丢失
-- **根因分析**:
-  - Sector 0: state=1 (AVAILABLE)
-  - Sector 1: state=2 (IN_USE) ← 包含有效数据
-  - 加载 Sector 1 数据成功，但 current_sector 未更新
-  - 新写入进入 Sector 0，重启后又加载 Sector 1 的旧数据
 - **修复**: 在 load_sector() 循环中记录 IN_USE 的 sector，加载完成后正确设置 current_sector
-
-#### 诊断增强
-- **AP_FlashStorage.cpp**:
-  - 添加 sector header 原始数据输出
-  - 添加 signature 验证和 state 状态日志
-  - 添加 found_in_use, last_in_use_sector 决策日志
-  - 添加 FINAL: current_sector 最终确认日志
-- **Storage.cpp**:
-  - 添加 flash 分区前 32 字节诊断输出
-  - 添加 flash_write 成功/失败统计
-- **AP_Param.cpp**:
-  - 添加 eeprom_write_check 调用统计
-
-#### 构造函数初始化
-- 显式初始化成员变量: current_sector, write_offset, reserved_space, write_error, in_switch_full_sector
-- 避免未定义初始值导致的潜在问题
-
-#### 修改的文件
-- libraries/AP_FlashStorage/AP_FlashStorage.cpp - 关键修复 + 诊断日志
-- libraries/AP_HAL_ESP32/Storage.cpp - flash 内容诊断
-- libraries/AP_Param/AP_Param.cpp - 参数写入统计
-
-#### 验证方法
-启动日志应显示:
-```
-DEBUG: found_in_use=1, last_in_use_sector=1 (before set)
-Setting current_sector=1 (IN_USE sector)
-FINAL: current_sector=1, write_offset=xxxx
-```
+- 显式初始化构造函数成员变量，避免未定义初始值
 
 ---
 
@@ -130,48 +122,10 @@ FINAL: current_sector=1, write_offset=xxxx
 
 ### LoRa MAVLink 数传初步完成
 
-#### LoRa SX1268 驱动集成
-- **lora_mavlink 组件**: 完整的 TX/RX 实现
-  - 环形缓冲区 (TX/RX ring buffer)
-  - FreeRTOS 任务调度
-  - DIO1 中断处理
-- **sx126x 驱动配置** (EBYTE E22-400MBL 兼容):
-  - Sync Word: 0x1444 (EBYTE 格式)
-  - OCP: 0x38 (140mA)
-  - TX Ramp: 40us
-  - 433MHz, SF11, BW500kHz, 22dBm
-
-#### SERIAL3 虚拟串口启用
-- **架构**: SERIAL3 → LoRaUARTDriver → lora_mavlink → sx126x → SPI → SX1268
-- **配置更新**:
-  - HAL_UART_NUM_SERIAL_PORTS: 3 → 4
-  - HAL_HAVE_SERIAL3_PARAMS: 0 → 1
-  - DEFAULT_SERIAL3_PROTOCOL: SerialProtocol_MAVLink2
-  - DEFAULT_SERIAL3_BAUD: 57600
-
-#### hwdef.dat LoRa 引脚修复
-- **问题**: SCK/MISO 引脚定义错误 (互换)
-- **修复**:
-  - LORA_PIN_SCK: GPIO_NUM_39 → GPIO_NUM_40
-  - LORA_PIN_MISO: GPIO_NUM_40 → GPIO_NUM_39
-
-#### Storage 调试输出修复
-- **问题**: STORAGEDEBUG 宏启用导致大量 printf 输出
-- **症状**: 参数加载时 UART 阻塞，触发看门狗超时重启 (rst:0xc)
-- **修复**: 注释 #define STORAGEDEBUG 1
-- **注意**: 此修复仅影响调试输出，参数存储功能不受影响
-
-#### 修改的文件
-- components/lora_mavlink/src/lora_mavlink.c - TX/RX 实现
-- components/lora_mavlink/src/sx126x.c - EBYTE 兼容配置
-- libraries/AP_HAL_ESP32/hwdef/esp32s3rover/hwdef.dat - 引脚修复 + SERIAL3
-- libraries/AP_HAL_ESP32/hwdef/hwdef.h - SERIAL3 参数
-- libraries/AP_HAL_ESP32/Storage.cpp - 禁用调试输出
-- main/main.c - LoRa 初始化
-
-#### 已知问题
-- LoRa 收发功能需要实际测试验证
-- Mission Planner 通过 LoRa 连接待测试
+- **lora_mavlink 组件**: TX/RX 实现 (环形缓冲区 + FreeRTOS 任务)
+- **sx126x 驱动**: EBYTE E22-400MBL 兼容 (433MHz, SF11, BW500kHz, 22dBm)
+- **SERIAL3 虚拟串口**: SERIAL3 → LoRaUARTDriver → lora_mavlink → SPI → SX1268
+- **hwdef.dat 引脚修复**: SCK/MISO 引脚互换纠正
 
 ---
 
@@ -179,260 +133,76 @@ FINAL: current_sector=1, write_offset=xxxx
 
 ### BNO08x ExternalAHRS 重大修复
 
-#### ENU→NED 坐标转换修复
-- **问题**: 原四元数转换使用简单分量交换，数学上错误
-- **修复**: 改用欧拉角中间转换，确保姿态数据正确
-  - roll_ned = pitch_enu
-  - pitch_ned = roll_enu  
-  - yaw_ned = π/2 - yaw_enu (航向从东基准转北基准)
-
-#### I2C 通信稳定性增强
-- **问题**: 运行中 I2C 失败时无诊断信息，无法恢复
-- **修复**:
-  - 添加连续失败计数 consecutive_failures
-  - 超过 50 次失败后自动重新初始化 (soft_reset + configure)
-  - 每 10 秒输出统计日志: pkts/err/rst/reinit
-
-#### 新增变量和常量
-- consecutive_failures - I2C 连续失败计数
-- reinit_count - 重新初始化次数
-- MAX_CONSECUTIVE_FAILURES = 50
-- STATS_INTERVAL_MS = 10000
-
-#### 修改的文件
-- libraries/AP_ExternalAHRS/AP_ExternalAHRS_BNO08x.h
-- libraries/AP_ExternalAHRS/AP_ExternalAHRS_BNO08x.cpp
+- **ENU→NED 坐标转换**: 改用欧拉角中间转换
+- **I2C 自动恢复**: 连续 50 次失败后自动重新初始化
 
 ---
 
 ## [v2.0.0] - 2025-12-30
 
-### 🎉 重大更新 - BNO08x IMU 稳定运行 & 翼帆控制框架
+### BNO08x IMU 稳定运行 & 翼帆控制框架
 
-#### BNO08x ExternalAHRS 修复
-- **I2C 设备探测增强**: 添加详细调试日志，便于定位通信问题
-- **probe_device()**: 记录 bus/addr、get_device_ptr 状态、transfer 结果
-- **hal_read()**: 添加 header 原始数据日志，便于协议分析
-
-#### MAVLink 消息修复
-- **MSG_WHEEL_DISTANCE (60) 修复**: 解决 "Sending unknown message (60)" 警告
-  - 问题: 禁用 AP_WHEELENCODER_ENABLED=0 后，消息调度未同步禁用
-  - 修复: GCS_MAVLink_Parameters.cpp 添加 && AP_WHEELENCODER_ENABLED 条件
-
-#### 翼帆控制统一框架 (Sailboat Wingsail Framework)
-- **三种翼帆类型支持**:
-  - WINGSAIL_ROTATION: 舵+翼帆旋转 (控制整个翼帆角度)
-  - WINGSAIL_FLAP: 舵+襟翼 (OpenTransat 方式)
-  - WINGSAIL_FREE: 只控舵 (Sailbuoy 自平衡方式)
-- **统一控制接口**:
-  - get_wingsail_type() - 获取翼帆类型
-  - get_normalized_control() - 归一化控制值 (-1.0 ~ +1.0)
-  - get_steering_gain() - 模式相关舵增益 (ROTATION:0.8, FLAP:1.0, FREE:1.3)
-  - get_steering_correction() - 统一舵修正值
-
-#### INA2xx 电池监控优化
-- **I2C 总线支持**: 支持指定 I2C 总线号
-- **参数优化**: 电池监控参数调整
-
-#### 修改的文件
-- libraries/AP_ExternalAHRS/AP_ExternalAHRS_BNO08x.cpp - 调试日志
-- libraries/GCS_MAVLink/GCS_MAVLink_Parameters.cpp - MSG_WHEEL_DISTANCE 修复
-- Rover/sailboat.h, Rover/sailboat.cpp - 翼帆框架
-- Rover/mode.cpp, Rover/mode_manual.cpp - 舵控制集成
-- libraries/AP_BattMonitor/AP_BattMonitor_INA2xx.* - 电池监控
-- libraries/RC_Channel/RC_Channel.h - RC 通道优化
+- **BNO08x**: I2C 设备探测增强，详细调试日志
+- **MAVLink**: 修复 MSG_WHEEL_DISTANCE (60) 警告
+- **翼帆框架**: 三种类型 (ROTATION/FLAP/FREE)，统一控制接口
+- **INA2xx**: 电池监控 I2C 总线支持
 
 ---
-
-# Changelog
 
 ## [v1.7.0] - 2025-12-29
 
-### MAVLink 带宽优化 (LoRa 遥测适配)
+### MAVLink 带宽优化 (LoRa 适配)
 
-针对 LoRa 低带宽链路优化 MAVLink 数据传输，总带宽从 ~12 kbps 降至 ~4.2 kbps。
-
-#### 禁用的 MAVLink 消息
-
-| 消息 | 所属流 | 说明 |
-|------|--------|------|
-| MSG_AHRS | EXTRA3 | AHRS 调试信息 |
-| MSG_AHRS2 | EXTRA1 | 备用 AHRS |
-| MSG_EKF_STATUS_REPORT | EXTRA3 | EKF 状态 |
-| MSG_VIBRATION | EXTRA3 | 振动数据 |
-| MSG_LOCAL_POSITION | POSITION | 与 GPS 重复 |
-| MSG_SYSTEM_TIME | EXTRA3 | 非关键 |
-| MSG_DISTANCE_SENSOR | EXTRA3 | 用 WATER_DEPTH 代替 |
-| MSG_MEMINFO | EXT_STAT | 内存调试 |
-| RAW_SENS 流 | - | 原始 IMU 数据 |
-| RAW_CTRL 流 | - | 原始控制输出 |
-
-#### 保留的核心消息
-
-- HEARTBEAT - 连接状态
-- SYS_STATUS - 系统健康
-- GPS_RAW - GPS 状态
-- GLOBAL_POSITION_INT - 位置
-- ATTITUDE - 姿态
-- VFR_HUD - 速度/航向
-- BATTERY_STATUS - 电池
-- WATER_DEPTH - 测深仪
-- SERVO_OUTPUT_RAW - 电机输出 (调试)
-- RC_CHANNELS - RC 输入 (调试)
-
-#### 新增功能
-
-- AP_FENCE 启用 - 地理围栏安全功能
-
-#### 修改的文件
-
-- Rover/config.h - MAVLink 消息禁用宏
-- libraries/AP_HAL/board/esp32.h - AP_FENCE_ENABLED=1
-- libraries/GCS_MAVLink/GCS_config.h - 消息控制宏定义
-- libraries/GCS_MAVLink/GCS_MAVLink_Parameters.cpp - 条件编译
-- hwdef/esp32s3rover/defaults.parm - 默认流速率
-- params/usv_minimal.param - 参数参考文件
-
-#### 带宽对比
-
-| 配置 | 带宽 |
-|------|------|
-| 原始 Rover 默认 | ~12 kbps |
-| v1.7.0 优化后 | ~4.2 kbps |
-| 节省 | ~65% |
+- 禁用 10+ 非关键 MAVLink 消息，带宽从 ~12kbps 降至 ~4.2kbps
+- 启用 AP_FENCE 地理围栏
 
 ---
 
-# Changelog
-
 ## [v1.6.0] - 2025-12-29
 
-### USV 功能精简 (USV Feature Optimization)
+### USV 功能精简
 
-针对无人船 (USV) 应用场景，禁用不需要的陆地车辆和飞行器功能，减少代码体积和内存占用。
-
-#### 已禁用的功能模块
-
-| 功能 | 宏定义 | 参数组 | 说明 |
-|------|--------|--------|------|
-| 轮编码器 | AP_WHEELENCODER_ENABLED=0 | WENC | USV 无轮子 |
-| 轮速率控制 | AP_WHEELRATECONTROL_ENABLED=0 | WRC | USV 无轮子 |
-| 翻车检测 | AP_ROVER_CRASH_CHECK_ENABLED=0 | CRASH_ANGLE | USV 不会翻车 |
-| 平衡车 | AP_ROVER_BALANCEBOT_ENABLED=0 | - | 两轮平衡车功能 |
-| MSP 协议 | HAL_MSP_ENABLED=0 | - | Betaflight OSD 协议 |
-| 室内信标 | AP_BEACON_ENABLED=0 | BCN | USV 户外使用 GPS |
-| 喷洒器 | HAL_SPRAYER_ENABLED=0 | SPRAY | 农业喷洒功能 |
-| 精确着陆 | AC_PRECLAND_ENABLED=0 | PLND | 飞行器功能 |
-| 对接模式 | MODE_DOCK_ENABLED=0 | - | 依赖精确着陆 |
-| 光流传感器 | AP_OPTICALFLOW_ENABLED=0 | FLOW | 飞行器悬停用 |
-| 空速计 | AP_AIRSPEED_ENABLED=0 | - | 飞行器用 |
-
-#### 修改的文件
-- Rover/config.h - 添加所有禁用宏定义
-- Rover/Parameters.cpp - 条件编译参数组
-- Rover/Parameters.h - 条件编译成员变量
-- Rover/Rover.cpp - 条件编译调度任务
-- Rover/Rover.h - 条件编译函数声明
-- Rover/sensors.cpp - 条件编译轮编码器更新
-- Rover/crash_check.cpp - 条件编译整个文件
-- Rover/system.cpp - 条件编译初始化代码
-- Rover/sailboat.cpp - 条件编译默认值设置
-- Rover/GCS_MAVLink_Rover.cpp - 条件编译 MAVLink 消息
-- Rover/Log.cpp - 条件编译日志记录
-- libraries/APM_Control/AR_AttitudeControl.cpp/h - 条件编译 Balance Bot PID
-
-#### USV 保留的核心功能
-- GPS 导航定位
-- 罗盘航向
-- IMU 姿态 (BNO08x ExternalAHRS)
-- 电池监控
-- MAVLink 通信 (UART/WiFi/LoRa)
-- MODE_MANUAL - 手动控制
-- MODE_AUTO - 自主航行
-- MODE_RTL - 返航
-- MODE_LOITER - 悬停定点
-- MODE_GUIDED - 地面站引导
-- Sailboat - 帆船功能
+- 禁用 11 个不需要的模块 (平衡车/轮编码器/光流/空速计/信标/喷洒器等)
+- 保留核心: GPS/罗盘/IMU/电池/MAVLink/Sailboat
 
 ---
 
 ## [v1.5.0] - 2025-12-29
 
-### 优化 (Improved)
-- **禁用 Balance Bot 功能**: USV/船型不需要两轮平衡车功能
-  - AP_ROVER_BALANCEBOT_ENABLED = 0
-  - 减少代码体积和内存占用
+### 串口映射优化 & Balance Bot 禁用
 
-- **串口映射优化**: 更直观的串口编号映射
-  - SERIAL0 = UART0 (MAVLink)
-  - SERIAL1 = UART1 (GPS) - 修复 GPS 无法识别问题
-  - SERIAL3 = LoRa (虚拟串口，底层 SPI)
-
-### 修复 (Fixed)
-- **Balance Bot 条件编译**: 修复禁用 balance bot 后的编译错误
-  - balance_bot.cpp - 添加 stub 函数
-  - AR_AttitudeControl.cpp/h - 条件编译 pitch to throttle PID
-  - Log.cpp - 条件编译 get_desired_pitch() 调用
-  - GCS_MAVLink_Rover.cpp - 条件编译 balance bot 相关代码
-
-- **GPS 串口配置**: 修复 GPS 数据无法读取问题
-  - 原因: SERIAL1 映射到 Empty 驱动，GPS 配置在 SERIAL3
-  - 修复: HAL_ESP32_Class.cpp 中 serial1Driver 改为 UARTDriver(1)
-
-### 技术细节
-- **串口映射** (HAL_ESP32_Class.cpp):
-  - SERIAL0 = UARTDriver(0) // UART0, MAVLink
-  - SERIAL1 = UARTDriver(1) // UART1, GPS @ 38400
-  - SERIAL2 = Empty         // 无物理 UART
-  - SERIAL3 = LoRaUARTDriver // 虚拟串口 (SPI->LoRa)
-
-- **GPS 硬件**:
-  - u-blox MAX-M10S @ UART1 (RX=GPIO18, TX=GPIO17)
-  - 波特率: 38400
+- SERIAL0=UART0(MAVLink), SERIAL1=UART1(GPS), SERIAL3=LoRa
+- 修复 GPS 无法识别问题
 
 ---
 
 ## [v1.4.0] - 2025-12-28
 
-### 新增 (Added)
-- **u-blox MAX-M10S GPS 支持**: 成功读取 GPS 数据
-- **BNO08x IMU 数据读取**: 成功读取姿态数据
-
-### 修复 (Fixed)
-- **AHRS ExternalAHRS 集成**: 修复 BNO08x 姿态数据未被导航使用的问题
+- u-blox MAX-M10S GPS 数据读取成功
+- BNO08x IMU 姿态数据读取成功
 
 ---
 
 ## [v1.3] - 2025-12-17
 
-### 新增 (Added)
-- **WiFi 配置系统**: 完整的 WiFi 参数集成到 ArduPilot
-- **LoRa MAVLink 数传**: 基于 SX1262 的远程遥测系统
+- WiFi 配置系统
+- LoRa MAVLink 数传 (SX1262)
 
 ---
 
 ## [v1.2] - 2025-12-15
 
-### 新增 (Added)
-- **BNO08x ExternalAHRS 驱动**: 完整实现 BNO08x IMU 传感器支持
-- **ExternalAHRS 框架启用**: 在 ESP32 平台启用外部 AHRS 支持
+- BNO08x ExternalAHRS 驱动
 
 ---
 
 ## [v1.1] - 2025-11-12
 
-### 修复 (Fixed)
-- 修复AP_AHRS API兼容性
-- 修复EKF函数调用
-
-### 新增 (Added)
-- PosHold模式
-- DroneCAN支持
+- 修复 AP_AHRS API 兼容性和 EKF 函数调用
+- 添加 PosHold 模式和 DroneCAN 支持
 
 ---
 
-## [v1.0] - 2024-12-XX
+## [v1.0] - 2024-12
 
-### 初始版本
-- ArduPilot Rover ESP32-S3 IDF移植
-- 基础功能实现
+- ArduPilot Rover ESP32-S3 IDF 首次移植

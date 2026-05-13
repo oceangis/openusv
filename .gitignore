@@ -1,5 +1,35 @@
 /.lock-waf*
 /.waf*
+
+# ============================================================
+# USV project session debug artifacts (one-shot test scripts)
+# Keeper scripts live in tools/verify/, tools/analyze/, tools/flash/
+# ============================================================
+# Project-root one-shot test/debug Python scripts
+/_*.py
+# Project-root logs, captures, and session output
+/_*.log
+/_*.txt
+/_*.json
+/_*.err
+/_*.csv
+# Project-root one-shot Windows helper bats (canonical versions in tools/flash/)
+/_*.bat
+# Project-root binary captures
+/_*.bin
+# Unzipped Excel scratch directory
+/_io_xlsx/
+/demo_extracted/
+# Calibration session signal files
+/_cal_*.txt
+# MAVProxy session recordings (binary)
+/session.tlog
+/session.tlog.raw
+/baseline.parm
+/baseline_v2.parm
+# (Note: params/*.parm IS tracked. These regex catches only root-level dumps)
+
+
 /Tools/autotest/aircraft/Rascal/reset.xml
 /Tools/autotest/ch7_mission.txt
 /Tools/autotest/param_metadata/Parameters.html
