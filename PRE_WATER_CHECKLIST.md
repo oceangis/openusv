@@ -96,9 +96,38 @@ AHRS_EKF_TYPE     = 3       # EKF3
 EK3_ENABLE        = 1
 EK3_SRC1_POSXY    = 3       # GPS
 EK3_SRC1_VELXY    = 3       # GPS
-EK3_SRC1_POSZ     = 0       # 无气压计，不估高度
+EK3_SRC1_POSZ     = 3       # GPS (was 0 in doc, but actual NVS was 1=BARO → blocked ARM)
+EK3_SRC1_VELZ     = 3       # GPS
 EK3_SRC1_YAW      = 1       # Compass
+EK3_SRC2_POSZ     = 0       # NONE — was default 1 (BARO), would have blocked ARM
+EK3_SRC2_VELZ     = 0       # NONE
+EK3_SRC3_POSZ     = 0       # NONE — was default 1 (BARO)
+EK3_SRC3_VELZ     = 0       # NONE
 ```
+
+**关键：** 没气压计时 SRC1/2/3 的 POSZ 都必须避开 BARO (=1)。AP 代码循环检查 3 个 lane，
+任何一个要 Baro 就拒绝 GUIDED/AUTO ARM。详见 `libraries/AP_NavEKF/AP_NavEKF_Source.cpp:pre_arm_check()`。
+
+### 2.1 代码层兜底默认值（factory-reset 也安全）
+
+`Rover/Parameters.cpp` 末尾用 `AP_Param::set_default_by_name()` 把以下 9 个参数的
+固件默认值改成 USV 专用，**不影响 NVS 已保存的用户值**（NVS 优先），仅在 NVS 被擦
+或第一次烧录时生效。验证日期：2026-05-14（factory reset + 重启读 EK3_SRC2_POSZ
+=0 来自代码默认，铁证）。
+
+| 参数 | 代码默认 | ArduPilot 上游默认 | 作用 |
+|---|---|---|---|
+| `EK3_SRC1_POSZ` | 3 (GPS) | 1 (BARO) | EKF 垂直位置源 |
+| `EK3_SRC2_POSZ` | 0 (NONE) | 1 (BARO) | EKF lane 2 |
+| `EK3_SRC3_POSZ` | 0 (NONE) | 1 (BARO) | EKF lane 3 |
+| `SERVO1_FUNCTION` | 73 (ThrottleLeft) | 26 (Steering) | 左推进器（差速船）|
+| `SERVO3_FUNCTION` | 74 (ThrottleRight) | 70 (Throttle) | 右推进器（差速船）|
+| `FRAME_CLASS` | 2 (Boat) | 1 (Rover) | 车型 |
+| `ARMING_CHECK` | 178 | 1 (ALL) | 跳过 GPS/RC/Compass/Logging |
+| `FS_THR_ENABLE` | 0 | 1 | 关 RC 失联触发（用 LoRa）|
+| `LOG_BACKEND_TYPE` | 0 | 1 (File) | 关 SD 日志（无 SD 卡）|
+
+**这套兜底的意义**：如果将来不小心 `param reset_all` 或 EEPROM 损坏，板子重启后**仍然是一艘可用的差速 USV**，不会变成"装错船型的危险默认 Rover"。用户当然可以 PARAM_SET 改回任何值——只是 NVS 空时的回退点变安全了。
 
 ---
 
@@ -118,7 +147,9 @@ EK3_SRC1_YAW      = 1       # Compass
 | 重启一致性 | ✓ 3 次重启 boot time 8.03s ± 3ms，终态 100% 一致 |
 | LoRa MAVLink TX | ✓ 433 MHz SF7 22dBm，初始化成功（已知能收发）|
 | CRUISE_LEARN 命令路径 | ✓ MAV_CMD_DO_AUX_FUNCTION 接受，但室内无速度→拒绝学习（正确行为）|
-| AUTO 模式 | ✓ 模式可进入，但 ARM 被 AHRS 检查拒绝（需 GPS 锁定）|
+| AUTO 模式 | ✓ 模式可进入，2026-05-14 雅加达桌面 GPS 锁定 + EK3_SRC fix 后 ARM 通过 |
+| GUIDED 模式 ARM | ✓ 2026-05-14 桌面验证通过（GPS lock + EK3_SRC config 修复后）|
+| AUTO 模式 ARM + mission 自启动 | ✓ 上传 3 航点 mission → AUTO ARM → s1=1900 s3=1267（差速混控立即驱动）|
 
 ---
 
@@ -129,7 +160,7 @@ EK3_SRC1_YAW      = 1       # Compass
 | 室内 GPS 无定位 | 卫星信号被遮挡 | ✓ 户外露天会锁定 |
 | 室内 AHRS 状态 BAD | 没有 GPS → EKF3 退化为 DCM | ✓ 户外 GPS 锁后 EKF3 启动正常 |
 | 罗盘磁场过大（1980） | 桌面附近有强磁干扰（USB/笔记本/显示器）| 远离金属/电子设备 + 户外重做 COMPASS_CAL |
-| AUTO 模式 ARM 阻拦 | 缺位置估计 | 户外 GPS 锁后 ARM 通过 |
+| ~~AUTO 模式 ARM 阻拦~~ | ~~缺位置估计~~ | ✓ **已解决** — GPS 锁定 + EK3_SRC 修复后通过（见 §2） |
 | CRUISE_LEARN 不能启动 | 无速度估计 | 户外有 GPS 后正常工作 |
 | ACRO/STEERING 模式不存在 | 固件被 usv-simplifier 精简 | USV 不需要这两个模式 |
 
@@ -170,11 +201,18 @@ EK3_SRC1_YAW      = 1       # Compass
 - [ ] 验证 CRUISE_SPEED / CRUISE_THROTTLE 已自动保存
 
 ### 步骤 5 — AUTO 模式首次试航
-- [ ] 上传一条 3-5 航点小回路（半径 < 100m）
-- [ ] 检查 mission readback 正确
-- [ ] 切到 AUTO 模式
-- [ ] ARM（这次应通过，因 AHRS 已就绪）
-- [ ] **保持 LoRa 遥控在身边**，准备紧急 MANUAL 接管
+
+> ⚠ **严重警告**：AUTO 模式 ARM 后船**立即**朝第一个航点全油门启动 — 2026-05-14
+> 桌面验证已确认：上传 mission 后切 AUTO，ARM 瞬间 s1=1900 s3=1267（差速混控立即驱动）。
+> **必须先上传 mission 再切 AUTO，且必须先校准船头朝向，否则船会朝错误方向冲出去**。
+
+- [ ] 步骤 5a：**先**确认船朝向相对航点正确（航点 1 不应在船尾正后方）
+- [ ] 步骤 5b：**先**上传 3-5 航点小回路（半径 < 100m，第一航点在船前 10-30m）
+- [ ] 步骤 5c：检查 mission readback 正确（航点数 + 经纬度匹配）
+- [ ] 步骤 5d：**保持 LoRa 遥控在手，手指放在 MANUAL 切换按钮上**
+- [ ] 步骤 5e：切到 AUTO 模式（**还没 ARM**，验证模式切换 OK）
+- [ ] 步骤 5f：ARM（这次应通过，因 GPS 锁 + AHRS 就绪 + EK3_SRC fix）
+- [ ] **立即观察**：船是否朝第一航点方向加速。如方向不对，**立刻切 MANUAL 接管**
 - [ ] 观察是否能按航点航行 + 速度合理（接近 CRUISE_SPEED）
 
 ### 步骤 6 — Failsafe / 应急路径
@@ -225,6 +263,13 @@ mavproxy.py --master=COM58 --baudrate=115200
 | `bench/verify/modes.py` | 探测所有 ArduRover 模式可用性 |
 | `bench/verify/apply_skid_config.py` | 重新应用 SERVO1=73 / SERVO3=74 |
 | `bench/verify/accel_cal_verify.py` | 验证 6 面加速度校准结果 |
+| `bench/verify/long_soak.py` | 30 分钟纯静默 soak（baseline，验证泄漏）|
+| `bench/verify/workload_soak.py` | 30 分钟工况 soak（ARM + 50Hz RC override）|
+| `bench/verify/gps_check.py` | 60 秒 GPS 状态快查（fix/sats/HDOP/位置精度）|
+| `bench/verify/auto_arm_verify.py` | GUIDED/AUTO ARM 验证 + mission 自启动观察 |
+| `bench/verify/param_persist_check.py` | 重启参数持久化测试 + dump baseline.parm |
+| `bench/verify/factory_reset_verify.py` | NVS 擦除验证代码层默认值机制 |
+| `bench/verify/_restore_baseline.py` | 从 baseline.parm PARAM_SET 批量恢复 |
 | `bench/analyze/tlog_dump.py` | 离线分析 MAVProxy session.tlog |
 | `bench/flash/flash_com58.bat` | 编译 + 烧录到 COM58 |
 | `bench/flash/mavproxy_bridge.bat` | MAVProxy 透传 + tlog 录制 |

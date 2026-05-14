@@ -901,4 +901,34 @@ void Rover::load_parameters(void)
     }
 #endif  // HAL_GCS_ENABLED
 
+#if CONFIG_HAL_BOARD == HAL_BOARD_ESP32
+    // ESP32-S3 USV control board — pin essential defaults so a factory-fresh
+    // EEPROM still boots into a working, safe configuration for this vessel.
+    // set_default_by_name() only changes the code-level fallback; any user-set
+    // NVS value still wins, so operators retain full configurability.
+    //
+    // 1. EKF sources — no barometer hardware (AP_BARO_ENABLED=0 in hwdef.h),
+    //    so EK3 must not request Baro for vertical position. Without this,
+    //    upstream defaults make GUIDED/AUTO pre-arm fail with
+    //    "EK3 sources require Baro".
+    AP_Param::set_default_by_name("EK3_SRC1_POSZ", 3);  // GPS  (was BARO)
+    AP_Param::set_default_by_name("EK3_SRC2_POSZ", 0);  // NONE (was BARO)
+    AP_Param::set_default_by_name("EK3_SRC3_POSZ", 0);  // NONE (was BARO)
+    // 2. Skid-steer boat — left/right thrusters on SERVO1/SERVO3 instead of
+    //    the default steering/throttle pair for a wheeled rover. Without these
+    //    a factory-reset board would drive a rudder+throttle that doesn't
+    //    exist, leaving the USV unsteerable.
+    AP_Param::set_default_by_name("SERVO1_FUNCTION", 73);  // ThrottleLeft
+    AP_Param::set_default_by_name("SERVO3_FUNCTION", 74);  // ThrottleRight
+    AP_Param::set_default_by_name("FRAME_CLASS", 2);       // Boat
+    // 3. Failsafes & logging tuned to this hardware:
+    //    - ARMING_CHECK = 178 — skip GPS/RC/Compass/Logging arm checks; we
+    //      have no SD card and no SBUS receiver in the bench configuration.
+    //    - FS_THR_ENABLE = 0 — no RC failsafe (control is via LoRa MAVLink).
+    //    - LOG_BACKEND_TYPE = 0 — no SD logging (no SD card hardware).
+    AP_Param::set_default_by_name("ARMING_CHECK",     178);
+    AP_Param::set_default_by_name("FS_THR_ENABLE",    0);
+    AP_Param::set_default_by_name("LOG_BACKEND_TYPE", 0);
+#endif
+
 }
