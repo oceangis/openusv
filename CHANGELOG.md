@@ -1,5 +1,99 @@
 # Changelog
 
+## 目录 / Table of Contents
+
+- [v2.7.0 - 2026-05-14](#v270---2026-05-14) — 无气压计 EKF 加固 + 9 USV 默认值锁定 + 30 分钟 soak 验证套件
+- [v2.6.0 - 2026-05-13](#v260---2026-05-13) — 固件标识 + 双推差速 USV 配置 + ACRO 航向保持
+- [v2.5.0 - 2026-01-15](#v250---2026-01-15)
+- [v2.4.0 - 2026-01-02](#v240---2026-01-02)
+- [v2.3.0 - 2026-01-02](#v230---2026-01-02)
+- [v2.2.0 - 2026-01-02](#v220---2026-01-02)
+- [v2.1.0 - 2025-12-30](#v210---2025-12-30)
+- [v2.0.0 - 2025-12-30](#v200---2025-12-30)
+- [v1.7.0 - 2025-12-29](#v170---2025-12-29)
+- [v1.6.0 - 2025-12-29](#v160---2025-12-29)
+- [v1.5.0 - 2025-12-29](#v150---2025-12-29)
+- [v1.4.0 - 2025-12-28](#v140---2025-12-28)
+- [v1.3 - 2025-12-17](#v13---2025-12-17)
+- [v1.2 - 2025-12-15](#v12---2025-12-15)
+- [v1.1 - 2025-11-12](#v11---2025-11-12)
+- [v1.0 - 2024-12](#v10---2024-12)
+
+---
+
+## [v2.7.0] - 2026-05-14
+
+### 无气压计 EKF 加固 + 9 个 USV 默认值锁定 + 30 分钟 soak 验证套件
+
+#### baroless EKF — 三层防护（编译时 + 代码默认 + NVS）
+- **问题**：GUIDED/AUTO ARM 在 GPS 锁定后仍被 `PreArm: AHRS: EK3 sources require Baro` 拒绝。原因：ArduPilot 在 `AP_NavEKF_Source::pre_arm_check()` 循环检查 3 个 source set（lane switching failover），任何一个 `EK3_SRCx_POSZ = 1 (BARO)` 都触发 `baro_required = true`，而我们的板子没有气压计硬件
+- **根因**：PRE_WATER_CHECKLIST 写的 `EK3_SRC1_POSZ = 0` 实际 NVS 是 `1 (BARO)`，文档失实
+- **三层防护**：
+  1. **编译时**：`hwdef.h:15 AP_BARO_ENABLED = 0`（已有）— AP_Baro library 完全不编进 binary
+  2. **代码默认（新增）**：`Rover/Parameters.cpp` 末尾 `AP_Param::set_default_by_name()` 把 `EK3_SRC{1,2,3}_POSZ` 强制设为 `3, 0, 0`（NVS 优先，仅 factory reset / 第一次烧录生效）
+  3. **NVS**：用户 PARAM_SET 仍然永远优先
+- **验证**：factory reset NVS → 重启 → 读 `EK3_SRC2_POSZ = 0`（来自代码默认覆盖，铁证机制生效）
+
+#### 9 个 USV 关键默认值锁定（`Rover/Parameters.cpp:904-928`）
+ESP32 only block，全部用 `set_default_by_name()` 不动 NVS：
+- `EK3_SRC1_POSZ = 3 (GPS)`，`EK3_SRC2_POSZ = 0`，`EK3_SRC3_POSZ = 0` — 无气压计 EKF
+- `SERVO1_FUNCTION = 73 (ThrottleLeft)`，`SERVO3_FUNCTION = 74 (ThrottleRight)` — 差速船
+- `FRAME_CLASS = 2 (Boat)` — 车型
+- `ARMING_CHECK = 178` — 跳过 GPS/RC/Compass/Logging
+- `FS_THR_ENABLE = 0` — 关 RC 失联（用 LoRa）
+- `LOG_BACKEND_TYPE = 0` — 关 SD 日志
+- **意义**：任何时候 EEPROM 损坏 / `param reset_all` 后，板子重启依然是可用的差速 USV，不会变成"装错船型的危险默认 Rover"
+
+#### 30 分钟桌面 soak 验证（零泄漏基线）
+- **静默 baseline** (`bench/verify/long_soak.py`)：USB 供电、无 ESC、无 SBUS、纯监听
+  - **free heap 8,257,536 → 8,257,536 字节，零漂移**
+  - EKF flags 0x033F 全程不抖、HB/RC/IMU 速率全稳、0 STATUSTEXT 警告
+- **Work-load** (`bench/verify/workload_soak.py`)：MANUAL+ARMED + 50 Hz RC 中位 override
+  - RC override 投递 **89,975 / 90,004 = 100.0%, 0 errors**
+  - 伺服 s1=1500、s3=1500 **range=0**（精确锁死）
+  - **free heap 仍 0 漂移**
+- 这两组 soak 一起证明 SBUS RMT 迁移（commit b09be0bb00）+ baroless 修复没有引入任何泄漏
+
+#### GPS 锁 + EKF 健康度验证（雅加达桌面）
+- **u-blox MAX-M8Q FIX_3D**，22-26 颗卫星，HDOP 0.8
+- 60 秒静态位置漂移 **0.02 m**（5 cm 量级，u-blox 标称水平）
+- EKF3 variances：`vel=0.016`，`pos_h=0.020`，`compass=0.014`（全 ≪ 0.1，excellent）
+- GPS_RAW_INT / GLOBAL_POSITION_INT 都稳定 5 Hz
+
+#### GUIDED/AUTO ARM 桌面验证（在 baroless fix 之后）
+- GUIDED ARM：`MAV_RESULT_ACCEPTED`，伺服保持中位（没收到位置命令时）
+- AUTO ARM + 3 航点 mission：`MAV_RESULT_ACCEPTED`，伺服**立即驱动**（s1=1900 全油门 + s3=1267 转向，差速混控指向第一个航点）
+- ⚠ 这意味着出水时 AUTO ARM 后船立刻冲向第一个航点 — `PRE_WATER_CHECKLIST §5` 已加入严重警告
+
+#### 8 个新验证脚本（`bench/verify/`）
+| 脚本 | 用途 |
+|---|---|
+| `long_soak.py` | 30 分钟纯静默 soak（baseline 泄漏检测）|
+| `workload_soak.py` | 30 分钟工况 soak（ARM + 50Hz RC override）|
+| `gps_check.py` | 60 秒 GPS 状态快查 |
+| `auto_arm_verify.py` | GUIDED/AUTO ARM 验证 + mission 自启动观察 |
+| `param_persist_check.py` | 重启参数持久化 + dump 完整 baseline.parm |
+| `factory_reset_verify.py` | NVS 擦除验证代码层默认值机制 |
+| `_restore_baseline.py` | 从 baseline.parm 批量 PARAM_SET 恢复 |
+| `quick_regression.py` | 2 分钟改后烟雾测试（之前已存在，未追踪）|
+
+所有脚本强制 `sys.stdout.reconfigure(encoding="utf-8")` 防 Windows GBK 控制台在长 soak 中遇 µ/✓ 字符崩溃。
+
+#### 533 参数完整快照 (`params/baseline_v3.parm`)
+- 包括加速度 6 面校准、AHRS_TRIM、差速混控配置、LoRa SF7 配置、新的 baroless EKF 源
+- 注意：`INS_GYROFFS_*` 备份了也没用 — ArduPilot 每次启动自动 init_gyro 并写覆盖 NVS（`INS_GYR_CAL=1` 默认）
+- 真正"独家信息"是 INS_ACCOFFS/SCAL/ID + COMPASS_OFS/DIA/ODI/DEV_ID + AHRS_TRIM_X/Y
+
+#### 文档更新
+- `PRE_WATER_CHECKLIST.md §2` — EKF 参数列表对齐到现实值
+- `PRE_WATER_CHECKLIST.md §2.1`（新增）— 9 个代码层兜底默认值清单 + 意义
+- `PRE_WATER_CHECKLIST.md §3` — 加入 GUIDED/AUTO ARM 验证记录
+- `PRE_WATER_CHECKLIST.md §4` — 移除"AUTO ARM 阻拦"（已解决）
+- `PRE_WATER_CHECKLIST.md §5` — 加入 AUTO ARM 即启推进器严重警告 + 分步骤安全流程
+- `PRE_WATER_CHECKLIST.md §8` — 8 个新脚本加入工具清单
+
+---
+
 ## [v2.6.0] - 2026-05-13
 
 ### 固件标识 + 双推差速 USV 配置 + ACRO 航向保持
