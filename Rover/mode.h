@@ -628,6 +628,24 @@ protected:
         uint32_t start_time_ms; // system time in milliseconds that control was handed to the external computer
         Location start_loc; // starting location for checking horiz_max limit
     } limit;
+
+private:
+    // --- OMNIX branch state (P3) ---
+    // initial yaw captured at mode entry, used by OMNI_YAW_MODE=0 (LOCK_INITIAL)
+    float _omni_initial_yaw{0.0f};
+    // integrator for OMNI_YAW_MODE=3 (MANUAL_RC)
+    float _omni_rc_yaw_integ{0.0f};
+    // true if this Guided entry is on OMNIX frame; gates exit cleanup
+    bool  _omni_active{false};
+
+    // OMNIX-only WP control. Replaces navigate_to_waypoint() in SubMode::WP
+    // when FRAME_TYPE==OMNIX. Reads target from g2.wp_nav (GCS-set destination),
+    // yaw per OMNI_YAW_MODE, dispatches to g2.omni_ctrl. Degrades to HOLD on
+    // lost position.
+    void update_omnix_wp();
+
+    // Computes target heading (rad) per OMNI_YAW_MODE.
+    float compute_omnix_target_yaw(float current_yaw, float dt);
 };
 
 
