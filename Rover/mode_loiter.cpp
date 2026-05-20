@@ -15,11 +15,25 @@ bool ModeLoiter::_enter()
     // initialise heading to current heading
     _desired_yaw_cd = ahrs.yaw_sensor;
 
+    // OMNIX P4: snapshot heading + reset controller if this Loiter entry is on OMNIX
+    _omni_yaw_state.initial_yaw = radians(ahrs.yaw_sensor * 0.01f);
+    _omni_yaw_state.rc_yaw_integ = 0.0f;
+    _omni_active = (g2.motors.get_frame_type() == AP_MotorsUGV::FRAME_TYPE_OMNIX);
+    if (_omni_active) {
+        g2.omni_ctrl.reset();
+    }
+
     return true;
 }
 
 void ModeLoiter::update()
 {
+    // OMNIX 4-thruster holonomic branch (P4)
+    if (g2.motors.get_frame_type() == AP_MotorsUGV::FRAME_TYPE_OMNIX) {
+        update_omnix();
+        return;
+    }
+
     // get distance (in meters) to destination
     _distance_to_destination = rover.current_loc.get_distance(_destination);
 
@@ -77,4 +91,51 @@ bool ModeLoiter::get_desired_location(Location& destination) const
 {
     destination = _destination;
     return true;
+}
+
+// OMNIX-only loiter: station-keep at _destination using g2.omni_ctrl.
+// Called from ModeLoiter::update() when frame is OMNIX. Heading is always
+// LOCK_INITIAL (snapshot at _enter) — Loiter is stationary, no path tangent.
+// Use POSHOLD for other yaw strategies.
+void ModeLoiter::update_omnix()
+{
+    // --- Position estimate required ---
+    Vector3f pos_ned;
+    if (!ahrs.get_relative_position_NED_origin_float(pos_ned)) {
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_lateral(0.0f);
+        g2.motors.set_steering(0.0f);
+        rover.set_mode(rover.mode_hold, ModeReason::EKF_FAILSAFE);
+        return;
+    }
+
+    // --- Location -> NED ---
+    Location origin;
+    if (!ahrs.get_origin(origin)) {
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_lateral(0.0f);
+        g2.motors.set_steering(0.0f);
+        return;
+    }
+    const Vector2f target_pos_ned = origin.get_distance_NE(_destination);
+
+    // --- Drive controller (LOCK_INITIAL yaw — stationary) ---
+    g2.omni_ctrl.set_target(target_pos_ned, _omni_yaw_state.initial_yaw);
+    g2.omni_ctrl.update(rover.G_Dt);
+
+    float fwd, lat, steer_norm;
+    if (!g2.omni_ctrl.get_outputs(fwd, lat, steer_norm)) {
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_lateral(0.0f);
+        g2.motors.set_steering(0.0f);
+        rover.set_mode(rover.mode_hold, ModeReason::EKF_FAILSAFE);
+        return;
+    }
+
+    g2.motors.set_throttle(fwd * 100.0f);
+    g2.motors.set_lateral(lat * 100.0f);
+    g2.motors.set_steering(steer_norm * 4500.0f, false);
+
+    // Update reporting field for GCS
+    _distance_to_destination = rover.current_loc.get_distance(_destination);
 }
