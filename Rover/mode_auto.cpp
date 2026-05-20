@@ -1152,3 +1152,80 @@ float ModeAuto::compute_omnix_target_yaw(float current_yaw, float dt)
     }
     (void)current_yaw;  // currently unused; kept for future strategies
 }
+
+// OMNIX-only WP control. Called from ModeAuto::update() SubMode::WP branch
+// when g2.motors.get_frame_type() == FRAME_TYPE_OMNIX.
+//
+// Responsibilities:
+//   - keep g2.wp_nav.update() ticking so it advances waypoints / reached flags
+//   - extract destination Location -> NED target offset
+//   - compute target yaw per OMNI_YAW_MODE
+//   - feed g2.omni_ctrl + push outputs to motors (forward + lateral + steering)
+//   - degrade to HOLD on lost position or invalid destination
+void ModeAuto::update_omnix_wp()
+{
+    // Tick AR_WPNav so it maintains _destination / nav_bearing / reached state.
+    // Its forward/steering outputs are ignored - we're in OMNIX path.
+    g2.wp_nav.update(rover.G_Dt);
+
+    // Boats stop on reached + non-fast WP (matches diff-drive boat behavior)
+    if (g2.wp_nav.reached_destination() && !g2.wp_nav.is_fast_waypoint()) {
+        if (!start_loiter()) {
+            start_stop();
+        }
+        return;
+    }
+
+    // --- Position estimate required ---
+    Vector3f pos_ned;
+    if (!ahrs.get_relative_position_NED_origin_float(pos_ned)) {
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_lateral(0.0f);
+        g2.motors.set_steering(0.0f, false);
+        rover.set_mode(rover.mode_hold, ModeReason::EKF_FAILSAFE);
+        return;
+    }
+
+    // --- Destination validity ---
+    if (!g2.wp_nav.is_destination_valid()) {
+        // No mission target yet - just hold position
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_lateral(0.0f);
+        g2.motors.set_steering(0.0f, false);
+        return;
+    }
+
+    // --- Convert destination Location to NED offset from EKF origin ---
+    Location origin;
+    if (!ahrs.get_origin(origin)) {
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_lateral(0.0f);
+        g2.motors.set_steering(0.0f, false);
+        return;
+    }
+    const Location& dest = g2.wp_nav.get_destination();
+    // get_distance_NE returns Vector2f (north_m, east_m) from origin to dest
+    const Vector2f target_pos_ned = origin.get_distance_NE(dest);
+
+    // --- Compute target yaw per OMNI_YAW_MODE ---
+    const float current_yaw = radians(ahrs.yaw_sensor * 0.01f);
+    const float target_yaw  = compute_omnix_target_yaw(current_yaw, rover.G_Dt);
+
+    // --- Drive g2.omni_ctrl ---
+    g2.omni_ctrl.set_target(target_pos_ned, target_yaw);
+    g2.omni_ctrl.update(rover.G_Dt);
+
+    float fwd, lat, steer_norm;
+    if (!g2.omni_ctrl.get_outputs(fwd, lat, steer_norm)) {
+        // Lost position mid-update - same degrade
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_lateral(0.0f);
+        g2.motors.set_steering(0.0f, false);
+        rover.set_mode(rover.mode_hold, ModeReason::EKF_FAILSAFE);
+        return;
+    }
+
+    g2.motors.set_throttle(fwd * 100.0f);
+    g2.motors.set_lateral(lat * 100.0f);
+    g2.motors.set_steering(steer_norm * 4500.0f, false);
+}
