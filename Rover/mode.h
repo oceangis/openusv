@@ -5,6 +5,20 @@
 // pre-define ModeRTL so Auto can appear higher in this file
 class ModeRTL;
 
+// --- Shared OMNIX yaw-strategy helper (P4) ---
+// Used by ModeAuto / ModeGuided / ModeLoiter OMNIX branches.
+// Each mode owns one OmniYawState instance and passes it by reference.
+struct OmniYawState {
+    float initial_yaw{0.0f};    // snapshot at mode entry (rad)
+    float rc_yaw_integ{0.0f};   // MANUAL_RC integrator (rad)
+};
+
+// Compute target heading (rad) per g2._omni_yaw_mode.
+// Reads g2._omni_yaw_mode, g2.wp_nav.nav_bearing_cd()/wp_bearing_cd(),
+// and RC channel 4 (for MANUAL_RC). dt is the loop period.
+// Defined in Rover/mode.cpp.
+float omnix_compute_target_yaw(OmniYawState& state, float dt);
+
 class Mode
 {
 public:
@@ -404,22 +418,14 @@ private:
     // Mission change detector
     AP_Mission_ChangeDetector mis_change_detector;
 
-    // --- OMNIX branch state (P2) ---
-    // initial yaw captured at mode entry, used by OMNI_YAW_MODE=0 (LOCK_INITIAL)
-    float _omni_initial_yaw{0.0f};
-    // integrator for OMNI_YAW_MODE=3 (MANUAL_RC) — accumulates target yaw from RC stick rate
-    float _omni_rc_yaw_integ{0.0f};
-    // true if this AUTO entry is on an OMNIX frame; gates _exit() cleanup of g2.omni_ctrl
-    bool  _omni_active{false};
+    // --- OMNIX branch state (P2; refactored P4) ---
+    OmniYawState _omni_yaw_state;
+    bool _omni_active{false};
 
     // OMNIX-only WP control. Replaces navigate_to_waypoint() when FRAME_TYPE==OMNIX.
     // Reads target from g2.wp_nav (destination + nav_bearing), yaw per OMNI_YAW_MODE,
     // dispatches to g2.omni_ctrl. Triggers HOLD failsafe on lost position.
     void update_omnix_wp();
-
-    // Computes target heading (rad) per OMNI_YAW_MODE for the current tick.
-    // dt is the loop period; current_yaw is from AHRS in radians.
-    float compute_omnix_target_yaw(float current_yaw, float dt);
 };
 
 #if MODE_CIRCLE_ENABLED
@@ -630,22 +636,15 @@ protected:
     } limit;
 
 private:
-    // --- OMNIX branch state (P3) ---
-    // initial yaw captured at mode entry, used by OMNI_YAW_MODE=0 (LOCK_INITIAL)
-    float _omni_initial_yaw{0.0f};
-    // integrator for OMNI_YAW_MODE=3 (MANUAL_RC)
-    float _omni_rc_yaw_integ{0.0f};
-    // true if this Guided entry is on OMNIX frame; gates exit cleanup
-    bool  _omni_active{false};
+    // --- OMNIX branch state (P3; refactored P4) ---
+    OmniYawState _omni_yaw_state;
+    bool _omni_active{false};
 
     // OMNIX-only WP control. Replaces navigate_to_waypoint() in SubMode::WP
     // when FRAME_TYPE==OMNIX. Reads target from g2.wp_nav (GCS-set destination),
     // yaw per OMNI_YAW_MODE, dispatches to g2.omni_ctrl. Degrades to HOLD on
     // lost position.
     void update_omnix_wp();
-
-    // Computes target heading (rad) per OMNI_YAW_MODE.
-    float compute_omnix_target_yaw(float current_yaw, float dt);
 };
 
 
@@ -725,6 +724,16 @@ protected:
 
     Location _destination;      // target location to hold position around
     float _desired_speed;       // desired speed (ramped down from initial speed to zero)
+
+private:
+    // --- OMNIX branch state (P4) ---
+    OmniYawState _omni_yaw_state;
+    bool _omni_active{false};
+
+    // OMNIX loiter: station-keep at _destination using g2.omni_ctrl.
+    // Called from update() when frame is OMNIX. Yaw is always LOCK_INITIAL
+    // (snapshot at _enter); use POSHOLD for other yaw strategies.
+    void update_omnix();
 };
 
 // Position Hold mode - ArduSub-style control for X-type vectored boats
