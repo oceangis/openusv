@@ -27,6 +27,7 @@ public:
         POSHOLD      = 13,
         GUIDED       = 15,
         INITIALISING = 16,
+        DP           = 17,
     };
 
     // Constructor
@@ -612,6 +613,58 @@ protected:
     } limit;
 };
 
+
+// Dynamic Positioning mode — X-config 4-thruster holonomic boats only.
+// Holds GPS position and heading simultaneously (Fossen 3-DOF PID).
+class ModeDP : public Mode
+{
+public:
+
+    // constructor for parameters
+    ModeDP();
+
+    CLASS_NO_COPY(ModeDP);
+
+    Number mode_number() const override { return Number::DP; }
+    const char *name4() const override { return "DP"; }
+
+    // methods that affect movement of the vehicle in this mode
+    void update() override;
+
+    bool is_autopilot_mode() const override { return true; }
+
+    // parameter table for DP_* params
+    static const struct AP_Param::GroupInfo var_info[];
+
+protected:
+
+    bool _enter() override;
+    void _exit() override;
+
+private:
+
+    // --- parameters ---
+    AP_Float _pos_p;        // position loop P
+    AP_Float _pos_i;        // position loop I
+    AP_Float _pos_d;        // position loop D
+    AP_Float _yaw_p;        // heading loop P
+    AP_Float _yaw_i;        // heading loop I
+    AP_Float _yaw_d;        // heading loop D
+    AP_Float _pos_db;       // position deadband (m)
+    AP_Float _yaw_db;       // heading deadband (deg)
+    AP_Float _speed_max;    // max correction / nudge speed (m/s)
+    AP_Float _imax;         // integrator limit
+    AP_Int16 _options;      // options bitmask
+
+    // --- state ---
+    Vector2f _target_pos;     // NED target position (m, from EKF origin)
+    Vector2f _pos_integ;      // position integrator
+    Vector2f _prev_pos_err;   // previous position error (for derivative)
+    float    _target_yaw;     // target heading (rad)
+    float    _yaw_integ;      // heading integrator
+    float    _prev_yaw_err;   // previous heading error
+    bool     _have_target;    // true once entry capture succeeded
+};
 
 class ModeHold : public Mode
 {

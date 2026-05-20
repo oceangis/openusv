@@ -432,6 +432,7 @@ public:
 #if MODE_CIRCLE_ENABLED
     class ModeCircle mode_circle;
 #endif
+    class ModeDP mode_dp;
 
 #if AP_WIFI_ESP32_ENABLED
     // WiFi configuration module

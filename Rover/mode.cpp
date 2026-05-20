@@ -566,6 +566,9 @@ Mode *Rover::mode_from_mode_num(const enum Mode::Number num)
         ret = &g2.mode_circle;
         break;
 #endif
+    case Mode::Number::DP:
+        ret = &g2.mode_dp;
+        break;
     case Mode::Number::AUTO:
         ret = &mode_auto;
         break;

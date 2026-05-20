@@ -126,6 +126,9 @@ public:
     // returns true if the vehicle is omni
     bool is_omni() const { return _frame_type != FRAME_TYPE_UNDEFINED && _motors_num > 0; }
 
+    // get the configured omni frame type (used by DP mode entry gate)
+    frame_type get_frame_type() const { return _frame_type; }
+
     // returns true if the vehicle uses boat vectored thrust
     bool is_boat_vectored() const {
         return _frame_type == FRAME_TYPE_BOAT_VECTORED_T ||

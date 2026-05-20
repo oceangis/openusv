@@ -97,6 +97,7 @@ public:
     friend class ModeCircle;
 #endif
     friend class ModeGuided;
+    friend class ModeDP;
     friend class ModeHold;
     friend class ModeLoiter;
 #if MODE_STEERING_ENABLED

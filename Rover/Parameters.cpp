@@ -644,6 +644,10 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     AP_SUBGROUPINFO(lora, "LORA_", 59, ParametersG2, AP_LoRa_ESP32),
 #endif
 
+    // @Group: DP
+    // @Path: mode_dp.cpp
+    AP_SUBGROUPINFO(mode_dp, "DP", 60, ParametersG2, ModeDP),
+
     AP_GROUPEND
 };
 
