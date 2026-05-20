@@ -31,10 +31,9 @@ bool ModeAuto::_enter()
     // set flag to start mission
     waiting_to_start = true;
 
-    // OMNIX P2: snapshot heading for LOCK_INITIAL / MANUAL_RC base,
-    // and reset shared controller state if this AUTO entry is on OMNIX frame.
-    _omni_initial_yaw = radians(ahrs.yaw_sensor * 0.01f);
-    _omni_rc_yaw_integ = 0.0f;
+    // OMNIX P2/P4: snapshot heading + reset shared controller state if OMNIX
+    _omni_yaw_state.initial_yaw = radians(ahrs.yaw_sensor * 0.01f);
+    _omni_yaw_state.rc_yaw_integ = 0.0f;
     _omni_active = (g2.motors.get_frame_type() == AP_MotorsUGV::FRAME_TYPE_OMNIX);
     if (_omni_active) {
         g2.omni_ctrl.reset();
@@ -1124,57 +1123,6 @@ bool ModeAuto::verify_nav_script_time()
 }
 #endif
 
-// Compute target heading for the OMNIX AUTO branch.
-// Strategy chosen by g2._omni_yaw_mode parameter.
-// All return values are radians.
-float ModeAuto::compute_omnix_target_yaw(float current_yaw, float dt)
-{
-    const uint8_t mode = (uint8_t)g2._omni_yaw_mode.get();
-
-    switch (mode) {
-    case 0: // LOCK_INITIAL - snapshot taken on entry
-        return _omni_initial_yaw;
-
-    case 1: { // TANGENT - follow path tangent from AR_WPNav
-        // nav_bearing_cd is the SCurve-shaped desired heading along the track
-        const float bearing_deg = g2.wp_nav.nav_bearing_cd() * 0.01f;
-        return radians(bearing_deg);
-    }
-
-    case 2: { // POINT_NEXT_WP - bearing to destination from current position
-        const float bearing_deg = g2.wp_nav.wp_bearing_cd() * 0.01f;
-        return radians(bearing_deg);
-    }
-
-    case 3: { // MANUAL_RC - RC ch4 controls yaw rate, we integrate
-        // RC channel 4 is the yaw stick. Read PWM, map 1000..2000 -> -1..+1.
-        // Scale to a yaw rate (rad/s) and integrate over dt.
-        // Default max rate: 90 deg/s at full stick.
-        const float kMaxYawRate = radians(90.0f);
-        float stick_norm = 0.0f;
-        const RC_Channel *ch4 = rc().channel(3);   // 0-indexed -> channel 4
-        if (ch4 != nullptr) {
-            const uint16_t pwm = ch4->get_radio_in();
-            // map 1000..2000 -> -1..+1 (1500 centered)
-            stick_norm = constrain_float((pwm - 1500.0f) / 500.0f, -1.0f, 1.0f);
-            // small deadband
-            if (fabsf(stick_norm) < 0.05f) stick_norm = 0.0f;
-        }
-        if (is_positive(dt)) {
-            _omni_rc_yaw_integ += stick_norm * kMaxYawRate * dt;
-            _omni_rc_yaw_integ = wrap_PI(_omni_rc_yaw_integ);
-        }
-        // Initial yaw + accumulated RC delta
-        return wrap_PI(_omni_initial_yaw + _omni_rc_yaw_integ);
-    }
-
-    default:
-        // Unknown mode: fall back to LOCK_INITIAL behavior
-        return _omni_initial_yaw;
-    }
-    (void)current_yaw;  // currently unused; kept for future strategies
-}
-
 // OMNIX-only WP control. Called from ModeAuto::update() SubMode::WP branch
 // when g2.motors.get_frame_type() == FRAME_TYPE_OMNIX.
 //
@@ -1230,8 +1178,7 @@ void ModeAuto::update_omnix_wp()
     const Vector2f target_pos_ned = origin.get_distance_NE(dest);
 
     // --- Compute target yaw per OMNI_YAW_MODE ---
-    const float current_yaw = radians(ahrs.yaw_sensor * 0.01f);
-    const float target_yaw  = compute_omnix_target_yaw(current_yaw, rover.G_Dt);
+    const float target_yaw = omnix_compute_target_yaw(_omni_yaw_state, rover.G_Dt);
 
     // --- Drive g2.omni_ctrl ---
     g2.omni_ctrl.set_target(target_pos_ned, target_yaw);
