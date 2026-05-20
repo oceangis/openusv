@@ -645,8 +645,8 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
 #endif
 
     // @Group: DP
-    // @Path: mode_dp.cpp
-    AP_SUBGROUPINFO(mode_dp, "DP", 60, ParametersG2, ModeDP),
+    // @Path: ../libraries/AR_OmniControl/AR_OmniControl.cpp
+    AP_SUBGROUPINFO(omni_ctrl, "DP", 60, ParametersG2, AR_OmniControl),
 
     AP_GROUPEND
 };

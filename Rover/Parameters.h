@@ -16,6 +16,7 @@
 #include <AP_Stats/AP_Stats.h>
 #include "AP_Torqeedo/AP_Torqeedo.h"
 #include <AP_WindVane/AP_WindVane.h>
+#include <AR_OmniControl/AR_OmniControl.h>
 
 #define AP_PARAM_VEHICLE_NAME rover
 
@@ -432,7 +433,7 @@ public:
 #if MODE_CIRCLE_ENABLED
     class ModeCircle mode_circle;
 #endif
-    class ModeDP mode_dp;
+    AR_OmniControl omni_ctrl;
 
 #if AP_WIFI_ESP32_ENABLED
     // WiFi configuration module
