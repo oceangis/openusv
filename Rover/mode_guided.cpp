@@ -16,6 +16,14 @@ bool ModeGuided::_enter()
 
     send_notification = false;
 
+    // OMNIX P3: snapshot heading + reset controller if this Guided entry is on OMNIX
+    _omni_initial_yaw = radians(ahrs.yaw_sensor * 0.01f);
+    _omni_rc_yaw_integ = 0.0f;
+    _omni_active = (g2.motors.get_frame_type() == AP_MotorsUGV::FRAME_TYPE_OMNIX);
+    if (_omni_active) {
+        g2.omni_ctrl.reset();
+    }
+
     return true;
 }
 
@@ -24,9 +32,15 @@ void ModeGuided::update()
     switch (_guided_mode) {
         case SubMode::WP:
         {
+            // OMNIX 4-thruster holonomic branch (P3)
+            if (g2.motors.get_frame_type() == AP_MotorsUGV::FRAME_TYPE_OMNIX) {
+                update_omnix_wp();
+                break;
+            }
+
             // check if we've reached the destination
             if (!g2.wp_nav.reached_destination()) {
-                // update navigation controller
+                // update navigation controller (differential-drive path)
                 navigate_to_waypoint();
             } else {
                 // send notification
