@@ -174,23 +174,25 @@ def main():
         time.sleep(0.02)
     m.set_mode(0)   # MANUAL
     time.sleep(1)
-    # 尝试解锁
+    # 先设 ARMING_CHECK=0 + 用 force param2=21196 解锁，边 arm 边持续发 override
+    set_param(m, "ARMING_CHECK", 0)
+    for _ in range(30):
+        send_override(m, 1500, 1500, 1500)
+        time.sleep(0.02)
     m.mav.command_long_send(m.target_system, m.target_component,
                             mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
-                            0, 1, 0, 0, 0, 0, 0, 0)
-    time.sleep(2)
-    armed = is_armed(m)
-    if not armed:
-        log("  常规解锁失败,临时 ARMING_CHECK=0 重试")
-        set_param(m, "ARMING_CHECK", 0)
-        for _ in range(40):
-            send_override(m, 1500, 1500, 1500)
-            time.sleep(0.02)
-        m.mav.command_long_send(m.target_system, m.target_component,
-                                mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
-                                0, 1, 0, 0, 0, 0, 0, 0)
-        time.sleep(2)
-        armed = is_armed(m)
+                            0, 1, 21196.0, 0, 0, 0, 0, 0)
+    # 持续发 override 等待 arm 生效（不能 sleep，否则 RC failsafe 触发）
+    t_arm = time.time()
+    armed = False
+    while time.time() - t_arm < 4:
+        send_override(m, 1500, 1500, 1500)
+        hb = m.recv_match(type='HEARTBEAT', blocking=True, timeout=0.1)
+        if hb:
+            armed = bool(hb.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
+            if armed:
+                break
+        time.sleep(0.02)
     log(f"  解锁状态: {armed}")
     results["manual_armed"] = bool(armed)
 
