@@ -31,6 +31,15 @@ bool ModeAuto::_enter()
     // set flag to start mission
     waiting_to_start = true;
 
+    // OMNIX P2: snapshot heading for LOCK_INITIAL / MANUAL_RC base,
+    // and reset shared controller state if this AUTO entry is on OMNIX frame.
+    _omni_initial_yaw = radians(ahrs.yaw_sensor * 0.01f);
+    _omni_rc_yaw_integ = 0.0f;
+    _omni_active = (g2.motors.get_frame_type() == AP_MotorsUGV::FRAME_TYPE_OMNIX);
+    if (_omni_active) {
+        g2.omni_ctrl.reset();
+    }
+
     return true;
 }
 
@@ -39,6 +48,13 @@ void ModeAuto::_exit()
     // stop running the mission
     if (mission.state() == AP_Mission::MISSION_RUNNING) {
         mission.stop();
+    }
+
+    // OMNIX P2: reset shared controller state when leaving OMNIX AUTO
+    // (avoids stale integrators carrying into another mode that uses g2.omni_ctrl)
+    if (_omni_active) {
+        g2.omni_ctrl.reset();
+        _omni_active = false;
     }
 }
 
@@ -82,13 +98,19 @@ void ModeAuto::update()
     switch (_submode) {
         case SubMode::WP:
         {
+            // OMNIX 4-thruster holonomic: use g2.omni_ctrl branch
+            if (g2.motors.get_frame_type() == AP_MotorsUGV::FRAME_TYPE_OMNIX) {
+                update_omnix_wp();
+                break;
+            }
+
             // boats loiter once the waypoint is reached
             bool keep_navigating = true;
             if (rover.is_boat() && g2.wp_nav.reached_destination() && !g2.wp_nav.is_fast_waypoint()) {
                 keep_navigating = !start_loiter();
             }
 
-            // update navigation controller
+            // update navigation controller (differential-drive path)
             if (keep_navigating) {
                 navigate_to_waypoint();
             }
