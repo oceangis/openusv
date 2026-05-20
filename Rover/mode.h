@@ -403,6 +403,23 @@ private:
 
     // Mission change detector
     AP_Mission_ChangeDetector mis_change_detector;
+
+    // --- OMNIX branch state (P2) ---
+    // initial yaw captured at mode entry, used by OMNI_YAW_MODE=0 (LOCK_INITIAL)
+    float _omni_initial_yaw{0.0f};
+    // integrator for OMNI_YAW_MODE=3 (MANUAL_RC) — accumulates target yaw from RC stick rate
+    float _omni_rc_yaw_integ{0.0f};
+    // true if this AUTO entry is on an OMNIX frame; gates _exit() cleanup of g2.omni_ctrl
+    bool  _omni_active{false};
+
+    // OMNIX-only WP control. Replaces navigate_to_waypoint() when FRAME_TYPE==OMNIX.
+    // Reads target from g2.wp_nav (destination + nav_bearing), yaw per OMNI_YAW_MODE,
+    // dispatches to g2.omni_ctrl. Triggers HOLD failsafe on lost position.
+    void update_omnix_wp();
+
+    // Computes target heading (rad) per OMNI_YAW_MODE for the current tick.
+    // dt is the loop period; current_yaw is from AHRS in radians.
+    float compute_omnix_target_yaw(float current_yaw, float dt);
 };
 
 #if MODE_CIRCLE_ENABLED
