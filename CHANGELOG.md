@@ -4,6 +4,7 @@
 
 | 回数 | 版本 | 日期 | 回目 |
 |:---:|:---:|:---:|:---|
+| 第十七回 | [v2.8.0](#v280---2026-05-20) | 2026-05-20 | 立库三度通六法　OMNIX 蟹横渡江河 |
 | 第十六回 | [v2.7.0](#v270---2026-05-14) | 2026-05-14 | 三重屏障驱气压　九项金锁固船魂 |
 | 第十五回 | [v2.6.0](#v260---2026-05-13) | 2026-05-13 | 易名留参守校准　双推差速辟洪涛 |
 | 第十四回 | [v2.5.0](#v250---2026-01-15) | 2026-01-15 | 二版电板归正脉　死环重启复归元 |
@@ -20,6 +21,105 @@
 | 第三回 | [v1.2](#v12---2025-12-15) | 2025-12-15 | 外接 BNO 立 AHRS　内卸 EKF 减重担 |
 | 第二回 | [v1.1](#v11---2025-11-12) | 2025-11-12 | AHRS 接口归正律　PosHold DroneCAN 同立 |
 | 第一回 | [v1.0](#v10---2024-12) | 2024-12 | ArduPilot 初登 S3　IDF 起航踏新程 |
+
+---
+
+## [v2.8.0] - 2026-05-20
+
+> **第十七回　立库三度通六法　OMNIX 蟹横渡江河**
+
+### OMNIX 4 推全驱动船全路径模式 + AR_OmniControl 共享 PID 库
+
+X 型 4 推进器全驱动船 (`FRAME_TYPE_OMNIX`) 的 5 阶段路径模式工程,从单一定点的 DP 模式扩展到完整的 mission 跟随、GCS 拖点、定点驻留、回家等全部规划路径模式。差速船代码完全不受影响 —— 所有 OMNIX 分支都是 `if (FRAME_TYPE_OMNIX) { update_omnix*(); return; }` 早返回,差速路径保持不动。
+
+#### 新增共享控制器库 `libraries/AR_OmniControl/`(P1)
+
+3-DOF position + heading PID 控制器,所有 OMNIX 路径模式共用一个 `g2.omni_ctrl` 单例:
+- NED 位置 PID(死区抗 GPS 漂)+ 航向 PID(死区)→ `R(ψ)ᵀ` 旋到船体系 → forward / lateral / steering 三路归一化输出
+- **PID 内核从原 ModeDP::update() 1:1 移植**(`commit 668791057f` 与 baseline `8bf90e8f0f:mode_dp.cpp:122-185` 字符级匹配),保证行为等价
+- 11 个 PID 参数保留 `DP_*` 前缀挂到 g2 subgroup 60(`DP_POS_P/I/D`、`DP_YAW_P/I/D`、`DP_POS_DB`、`DP_YAW_DB`、`DP_SPEED`、`DP_IMAX`、`DP_OPTIONS`),EEPROM 键完全不变 —— 已 tune 的值跨重构无损
+- ModeDP 从 ~185 行降到 70 行薄壳:仅入口门禁 + target snapshot + dispatch + 失位降级 HOLD
+
+#### 6 个路径模式全部 OMNIX 化(P2 - P5)
+
+| Mode | Number | OMNIX 阶段 | Yaw 策略 |
+|---|:---:|:---:|---|
+| DP | 17 | P1 | LOCK_INITIAL(snapshot) |
+| AUTO | 10 | P2 | 4 strategies |
+| GUIDED — WP submode | 15 | P3 | 4 strategies |
+| LOITER | 5 | P4 | LOCK_INITIAL(hard-coded,静止无切线) |
+| RTL | 11 | P5 | 4 strategies |
+| SMART_RTL — PathFollow | 12 | P5 | 4 strategies |
+
+每个模式遵循统一模式:`_enter()` snapshot 艏向 + reset 控制器 → `update()` 顶部 OMNIX 早返回 → `update_omnix_wp()`(或 `update_omnix()` for Loiter) 取 target_pos NED(从 `g2.wp_nav.get_destination()` 或 mode-specific 来源) → `compute_omnix_target_yaw()` 计算 target_yaw → 喂 `g2.omni_ctrl` → 失位降级 HOLD。
+
+#### 4 种 yaw 策略(`OMNI_YAW_MODE` 参数,P2)
+
+新增 g2 参数 `OMNI_YAW_MODE`(AP_Int8 default 1)+ `OMNI_LOS_LOOK`(AP_Float default 2.0m):
+
+- **`0 LOCK_INITIAL`** —— 进模式时 snapshot 艏向,全程锁定。**蟹形走** —— 船头朝北、横走向东,OMNIX 独有的高级特性
+- **`1 TANGENT`** —— 跟 `wp_nav.nav_bearing_cd()` 路径切线,看起来像传统船(默认)
+- **`2 POINT_NEXT_WP`** —— 艏向永远指 next waypoint(`wp_bearing_cd`),侦察 / 观察场景
+- **`3 MANUAL_RC`** —— 路径自动走,RC 第 4 通道手控艏向(90 deg/s @ full stick),积分到 `_omni_initial_yaw`
+
+#### 共享 helper 重构(P4)
+
+`compute_omnix_target_yaw()` 最初在 ModeAuto + ModeGuided 各 copy 一份(P2 + P3)。**P4 把它抽到 `mode.cpp` 的 file-scope free function** `omnix_compute_target_yaw(OmniYawState&, float dt)`:
+- 引入 `OmniYawState` struct(`initial_yaw` + `rc_yaw_integ`)放在 mode.h
+- ModeAuto + ModeGuided 各自从 `_omni_initial_yaw + _omni_rc_yaw_integ + compute_omnix_target_yaw` 改用 `OmniYawState _omni_yaw_state + 共享 helper`
+- `Rover.h` 加 `friend float omnix_compute_target_yaw(...)`(因为 `g2` 是 Rover 私有)
+- **二进制 -288 字节**(`0x121a60 → 0x121940`) —— 去重实测有效
+
+#### ModeDock 永久跳过
+
+`Rover/config.h:148` `#define MODE_DOCK_ENABLED 0` —— precland 模块禁用(USV 用不上飞行器的精确着陆),Dock 模式不存在于 binary。规格 §6 P4 Dock 行明确跳过。
+
+#### Loiter delegate 让 RTL/SmartRTL 白送
+
+ModeRTL `reached_destination` 时 delegate 到 `rover.mode_loiter.update()` —— Loiter 在 P4 已经 OMNIX 化,所以 **RTL 到家 station-keep 自动用 OMNIX 控制律**。ModeSmartRTL 的 `StopAtHome` / `Failure` 状态同样 delegate 到 Loiter,**SmartRTL 也免费拿到 OMNIX 到家站位**。
+
+#### 失位保护(所有 OMNIX 模式)
+
+`AR_OmniControl::get_outputs()` 检测到 `ahrs.get_relative_position_NED_origin_float()` 失败时返回 false。所有 update_omnix*() 收到 false → 停所有桨 + `rover.set_mode(rover.mode_hold, ModeReason::EKF_FAILSAFE)`。**这是 ModeDP v1 没有的特性,P1 重构顺便补上**。
+
+#### 5 个新 bench 验证脚本
+
+| 脚本 | 用途 | GPS 要求 |
+|---|---|:---:|
+| `omnix_mix_test.py` | 4 推 OMNIX 混控正确性(P1 核心,所有阶段 regression 必跑) | 否 |
+| `omni_auto_test.py` | AUTO mission 横移证据 | 是 |
+| `omni_guided_test.py` | Guided 拖点横移证据 | 是 |
+| `omni_loiter_test.py` | LOITER 站位 sanity | 是 |
+| `omni_rtl_test.py` | RTL 回家横移证据(SET_HOME 偏移 10m N + 5m E) | 是 |
+
+SmartRTL 没 bench 脚本 —— 它需要 saved path,bench 上 boat 不动建不起 path,留给水中测试。
+
+#### 硬件回归(板子已烧录 P5 末位 commit `fe1fe71b8b`,COM10)
+
+每个 phase 完成后都重跑 `omnix_mix_test.py` + 检查 EEPROM:
+- **`omnix_mix_test.py` 5 次 6/6 PASS**(P1 / P2 / P3 / P4 / P5 各跑一次,混控完全没动)
+- **EEPROM 5 次稳定**:11 DP_* + 2 OMNI_* 全部 baseline 值,值与重构前完全一致
+- **二进制大小**:P1 之后 0x121208 → P5 之后 0x121d70,净增长 ~3KB(全部新代码 + 1 个 .so 节省了重复代码),62% partition free
+
+#### 设计 + 实施文档
+
+- 设计:`docs/superpowers/specs/2026-05-20-omnix-path-modes-design.md`
+- P1 plan:`docs/superpowers/plans/2026-05-20-omnix-path-modes-p1.md`(库 + ModeDP 重构,9 task)
+- P2 plan:`docs/superpowers/plans/2026-05-20-omnix-path-modes-p2.md`(ModeAuto + 4 yaw,7 task)
+- P3 plan:`docs/superpowers/plans/2026-05-20-omnix-path-modes-p3.md`(ModeGuided WP,7 task)
+- P4 plan:`docs/superpowers/plans/2026-05-20-omnix-path-modes-p4.md`(refactor + Loiter,8 task)
+- P5 plan:`docs/superpowers/plans/2026-05-20-omnix-path-modes-p5.md`(RTL + SmartRTL,7 task)
+
+#### 不做(规格内决策)
+
+- **ModeDock OMNIX**:precland 在 USV 项目里永久禁用
+- **Guided HeadingAndSpeed / TurnRateAndSpeed lateral**:GCS 协议(SET_POSITION_TARGET_LOCAL_NED)的 lateral velocity 位还没实现支持,复杂度大收益小
+- **Guided SteeringAndThrottle lateral**:MANUAL_CONTROL 透传协议本身没 lateral field
+
+#### 剩下待办(不在本版本)
+
+- **5 个 GPS-gated 脚本闭环**:`dp_final_test.py` + 4 个 `omni_*_test.py` 全部需要 GPS lock ≥ 8 sats。当前板子在雅加达室内 0 sats,需要搬到窗边或户外才能跑闭环
+- **P6 出水验证**(规格 §5):7 步水中测试流程已写好,真下水才能验。建议出水顺序:MANUAL → DP 系泊 → AUTO 矩形 lawnmower(TANGENT)→ AUTO 蟹形巡航(LOCK_INITIAL,OMNIX 独有)→ GUIDED 拖点 → RTL 回家 → LOITER 半小时漂移
 
 ---
 
