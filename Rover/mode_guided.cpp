@@ -488,3 +488,84 @@ float ModeGuided::compute_omnix_target_yaw(float current_yaw, float dt)
     }
     (void)current_yaw;
 }
+
+// OMNIX-only Guided WP control. Called from ModeGuided::update() SubMode::WP
+// when g2.motors.get_frame_type() == FRAME_TYPE_OMNIX.
+//
+// Responsibilities:
+//   - tick g2.wp_nav for waypoint progression
+//   - on reached_destination: send notification + start loiter/stop
+//   - extract destination Location -> NED target offset
+//   - compute target yaw per OMNI_YAW_MODE
+//   - drive g2.omni_ctrl + push outputs to motors
+//   - degrade to HOLD on lost position or no origin
+void ModeGuided::update_omnix_wp()
+{
+    g2.wp_nav.update(rover.G_Dt);
+
+    if (g2.wp_nav.reached_destination()) {
+        if (send_notification) {
+            send_notification = false;
+            rover.gcs().send_mission_item_reached_message(0);
+        }
+        if (rover.is_boat()) {
+            if (!start_loiter()) {
+                stop_vehicle();
+            }
+        } else {
+            stop_vehicle();
+        }
+        _distance_to_destination = rover.current_loc.get_distance(g2.wp_nav.get_destination());
+        return;
+    }
+
+    // --- Position estimate required ---
+    Vector3f pos_ned;
+    if (!ahrs.get_relative_position_NED_origin_float(pos_ned)) {
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_lateral(0.0f);
+        g2.motors.set_steering(0.0f, false);
+        rover.set_mode(rover.mode_hold, ModeReason::EKF_FAILSAFE);
+        return;
+    }
+
+    // --- Destination validity ---
+    if (!g2.wp_nav.is_destination_valid()) {
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_lateral(0.0f);
+        g2.motors.set_steering(0.0f, false);
+        return;
+    }
+
+    // --- Location -> NED ---
+    Location origin;
+    if (!ahrs.get_origin(origin)) {
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_lateral(0.0f);
+        g2.motors.set_steering(0.0f, false);
+        return;
+    }
+    const Location& dest = g2.wp_nav.get_destination();
+    const Vector2f target_pos_ned = origin.get_distance_NE(dest);
+
+    // --- Target yaw ---
+    const float current_yaw = radians(ahrs.yaw_sensor * 0.01f);
+    const float target_yaw  = compute_omnix_target_yaw(current_yaw, rover.G_Dt);
+
+    // --- Drive controller ---
+    g2.omni_ctrl.set_target(target_pos_ned, target_yaw);
+    g2.omni_ctrl.update(rover.G_Dt);
+
+    float fwd, lat, steer_norm;
+    if (!g2.omni_ctrl.get_outputs(fwd, lat, steer_norm)) {
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_lateral(0.0f);
+        g2.motors.set_steering(0.0f, false);
+        rover.set_mode(rover.mode_hold, ModeReason::EKF_FAILSAFE);
+        return;
+    }
+
+    g2.motors.set_throttle(fwd * 100.0f);
+    g2.motors.set_lateral(lat * 100.0f);
+    g2.motors.set_steering(steer_norm * 4500.0f, false);
+}
