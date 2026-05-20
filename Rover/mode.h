@@ -851,6 +851,17 @@ protected:
     bool send_notification; // used to send one time notification to ground station
     bool _loitering;        // true if loitering at end of RTL
 
+private:
+    // --- OMNIX branch state (P5) ---
+    OmniYawState _omni_yaw_state;
+    bool _omni_active{false};
+
+    // OMNIX-only WP control for RTL. Replaces navigate_to_waypoint() when
+    // FRAME_TYPE==OMNIX. Reads target from g2.wp_nav (home/rally), yaw per
+    // OMNI_YAW_MODE, dispatches to g2.omni_ctrl. Degrades to HOLD on lost
+    // position.
+    void update_omnix_wp();
+
 };
 
 #if MODE_SMARTRTL_ENABLED
