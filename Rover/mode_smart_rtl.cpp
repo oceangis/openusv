@@ -28,6 +28,14 @@ bool ModeSmartRTL::_enter()
     smart_rtl_state = SmartRTLState::WaitForPathCleanup;
     _loitering = false;
 
+    // OMNIX P5: snapshot heading + reset controller if frame is OMNIX
+    _omni_yaw_state.initial_yaw = radians(ahrs.yaw_sensor * 0.01f);
+    _omni_yaw_state.rc_yaw_integ = 0.0f;
+    _omni_active = (g2.motors.get_frame_type() == AP_MotorsUGV::FRAME_TYPE_OMNIX);
+    if (_omni_active) {
+        g2.omni_ctrl.reset();
+    }
+
     return true;
 }
 
@@ -75,8 +83,13 @@ void ModeSmartRTL::update()
                 }
                 _load_point = false;
             }
-            // update navigation controller
-            navigate_to_waypoint();
+            // OMNIX 4-thruster holonomic branch (P5)
+            if (g2.motors.get_frame_type() == AP_MotorsUGV::FRAME_TYPE_OMNIX) {
+                update_omnix_wp();
+            } else {
+                // update navigation controller (differential-drive path)
+                navigate_to_waypoint();
+            }
 
             // check if we've reached the next point
             if (g2.wp_nav.reached_destination()) {
@@ -139,5 +152,57 @@ void ModeSmartRTL::save_position()
     g2.smart_rtl.update(true, save_pos);
 }
 
+
+// OMNIX-only WP control for SmartRTL PathFollow state. Called when
+// frame is OMNIX. Replaces navigate_to_waypoint() with g2.omni_ctrl
+// drive toward the current popped path point.
+void ModeSmartRTL::update_omnix_wp()
+{
+    g2.wp_nav.update(rover.G_Dt);
+
+    // --- Position estimate required ---
+    Vector3f pos_ned;
+    if (!ahrs.get_relative_position_NED_origin_float(pos_ned)) {
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_lateral(0.0f);
+        g2.motors.set_steering(0.0f);
+        rover.set_mode(rover.mode_hold, ModeReason::EKF_FAILSAFE);
+        return;
+    }
+
+    if (!g2.wp_nav.is_destination_valid()) {
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_lateral(0.0f);
+        g2.motors.set_steering(0.0f);
+        return;
+    }
+
+    Location origin;
+    if (!ahrs.get_origin(origin)) {
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_lateral(0.0f);
+        g2.motors.set_steering(0.0f);
+        return;
+    }
+    const Vector2f target_pos_ned = origin.get_distance_NE(g2.wp_nav.get_destination());
+
+    const float target_yaw = omnix_compute_target_yaw(_omni_yaw_state, rover.G_Dt);
+
+    g2.omni_ctrl.set_target(target_pos_ned, target_yaw);
+    g2.omni_ctrl.update(rover.G_Dt);
+
+    float fwd, lat, steer_norm;
+    if (!g2.omni_ctrl.get_outputs(fwd, lat, steer_norm)) {
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_lateral(0.0f);
+        g2.motors.set_steering(0.0f);
+        rover.set_mode(rover.mode_hold, ModeReason::EKF_FAILSAFE);
+        return;
+    }
+
+    g2.motors.set_throttle(fwd * 100.0f);
+    g2.motors.set_lateral(lat * 100.0f);
+    g2.motors.set_steering(steer_norm * 4500.0f, false);
+}
 
 #endif  // MODE_SMARTRTL_ENABLED
