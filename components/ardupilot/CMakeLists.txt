@@ -298,6 +298,7 @@ set(COMPONENT_ADD_INCLUDEDIRS
     "../../libraries/AP_Winch"
     "../../libraries/AP_WindVane"
     "../../libraries/AR_Motors"
+    "../../libraries/AR_OmniControl"
     "../../libraries/AR_WPNav"
     "../../libraries/Filter"
     "../../libraries/GCS_MAVLink"
