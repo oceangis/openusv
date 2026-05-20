@@ -86,9 +86,69 @@ void AR_OmniControl::set_target(const Vector2f& pos_ned, float yaw_rad,
 
 void AR_OmniControl::update(float dt)
 {
-    // Implemented in Task 4.
-    (void)dt;
-    _outputs_valid = false;
+    AP_AHRS& ahrs = AP::ahrs();
+
+    // Position estimate required
+    Vector3f pos_ned;
+    if (!ahrs.get_relative_position_NED_origin_float(pos_ned)) {
+        _out_fwd = _out_lat = _out_steer = 0.0f;
+        _outputs_valid = false;
+        return;
+    }
+
+    const float yaw = radians(ahrs.yaw_sensor * 0.01f);   // yaw_sensor in cdeg
+    const Vector2f pos_now(pos_ned.x, pos_ned.y);
+
+    // --- Position error + deadband ---
+    Vector2f e = _target_pos - pos_now;
+    if (e.length() < _pos_db) {
+        e.zero();
+        _pos_integ.zero();
+    }
+
+    // --- Position PID (NED frame vector) ---
+    if (is_positive(dt)) {
+        _pos_integ += e * (_pos_i * dt);
+    }
+    _pos_integ.x = constrain_float(_pos_integ.x, -_imax, _imax);
+    _pos_integ.y = constrain_float(_pos_integ.y, -_imax, _imax);
+    Vector2f pos_deriv;
+    if (is_positive(dt)) {
+        pos_deriv = (e - _prev_pos_err) * (1.0f / dt);
+    }
+    _prev_pos_err = e;
+    const Vector2f f_ned = e * _pos_p + _pos_integ + pos_deriv * _pos_d;
+
+    // --- Heading error + deadband ---
+    float ey = wrap_PI(_target_yaw - yaw);
+    if (fabsf(ey) < radians(_yaw_db)) {
+        ey = 0.0f;
+        _yaw_integ = 0.0f;
+    }
+
+    // --- Heading PID ---
+    if (is_positive(dt)) {
+        _yaw_integ += ey * (_yaw_i * dt);
+    }
+    _yaw_integ = constrain_float(_yaw_integ, -_imax, _imax);
+    float yaw_deriv = 0.0f;
+    if (is_positive(dt)) {
+        yaw_deriv = (ey - _prev_yaw_err) * (1.0f / dt);
+    }
+    _prev_yaw_err = ey;
+    float m_yaw = ey * _yaw_p + _yaw_integ + yaw_deriv * _yaw_d;
+
+    // --- R(psi)^T: rotate NED force into body frame ---
+    const float cy = cosf(yaw);
+    const float sy = sinf(yaw);
+    float forward =  cy * f_ned.x + sy * f_ned.y;
+    float lateral = -sy * f_ned.x + cy * f_ned.y;
+
+    // --- Saturate ---
+    _out_fwd   = constrain_float(forward, -1.0f, 1.0f);
+    _out_lat   = constrain_float(lateral, -1.0f, 1.0f);
+    _out_steer = constrain_float(m_yaw,   -1.0f, 1.0f);
+    _outputs_valid = true;
 }
 
 bool AR_OmniControl::get_outputs(float& fwd, float& lat, float& steer_norm) const

@@ -52,18 +52,18 @@ private:
 
     // --- target ---
     Vector2f _target_pos;
-    float    _target_yaw;
+    float    _target_yaw{0.0f};
     Vector2f _vel_ff;
 
     // --- PID state ---
     Vector2f _pos_integ;
     Vector2f _prev_pos_err;
-    float    _yaw_integ;
-    float    _prev_yaw_err;
+    float    _yaw_integ{0.0f};
+    float    _prev_yaw_err{0.0f};
 
     // --- last outputs ---
-    float _out_fwd;
-    float _out_lat;
-    float _out_steer;
-    bool  _outputs_valid;
+    float _out_fwd{0.0f};
+    float _out_lat{0.0f};
+    float _out_steer{0.0f};
+    bool  _outputs_valid{false};
 };
