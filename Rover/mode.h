@@ -907,6 +907,16 @@ protected:
     bool _enter() override;
     bool _load_point;
     bool _loitering;        // true if loitering at end of SRTL
+
+private:
+    // --- OMNIX branch state (P5) ---
+    OmniYawState _omni_yaw_state;
+    bool _omni_active{false};
+
+    // OMNIX-only WP control for SmartRTL PathFollow state. Replaces
+    // navigate_to_waypoint() when FRAME_TYPE==OMNIX. Same pattern as
+    // ModeRTL but acts on each path-pop point.
+    void update_omnix_wp();
 };
 #endif  // MODE_SMARTRTL_ENABLED
 
