@@ -430,6 +430,13 @@ public:
     // FS GCS timeout trigger time
     AP_Float fs_gcs_timeout;
 
+    // OMNIX path-mode yaw strategy (consumed by AUTO/GUIDED/RTL/etc. in P2+)
+    // 0=LOCK_INITIAL, 1=TANGENT, 2=POINT_NEXT_WP, 3=MANUAL_RC
+    AP_Int8  _omni_yaw_mode;
+
+    // Look-ahead distance (m) for TANGENT mode (consumed in P2+)
+    AP_Float _omni_los_look;
+
 #if MODE_CIRCLE_ENABLED
     class ModeCircle mode_circle;
 #endif

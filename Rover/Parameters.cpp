@@ -648,6 +648,21 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Path: ../libraries/AR_OmniControl/AR_OmniControl.cpp
     AP_SUBGROUPINFO(omni_ctrl, "DP", 60, ParametersG2, AR_OmniControl),
 
+    // @Param: OMNI_YAW_MODE
+    // @DisplayName: OMNIX path-mode yaw strategy
+    // @Description: 0=LockInitial 1=Tangent 2=PointNextWP 3=ManualRC. Used by AUTO/GUIDED/RTL/etc. when frame type is OMNIX.
+    // @Values: 0:LockInitial,1:Tangent,2:PointNextWP,3:ManualRC
+    // @User: Standard
+    AP_GROUPINFO("OMNI_YAW_MODE", 61, ParametersG2, _omni_yaw_mode, 1),
+
+    // @Param: OMNI_LOS_LOOK
+    // @DisplayName: OMNIX line-of-sight look-ahead distance
+    // @Description: Look-ahead distance for tangent heading mode
+    // @Units: m
+    // @Range: 0.5 10.0
+    // @User: Standard
+    AP_GROUPINFO("OMNI_LOS_LOOK", 62, ParametersG2, _omni_los_look, 2.0f),
+
     AP_GROUPEND
 };
 
