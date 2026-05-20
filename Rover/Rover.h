@@ -126,6 +126,9 @@ public:
 
     friend class Sailboat;
 
+    // P4: shared OMNIX yaw helper (file-scope free function in mode.cpp)
+    friend float omnix_compute_target_yaw(OmniYawState& state, float dt);
+
     Rover(void);
 
 private:
